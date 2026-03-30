@@ -1,0 +1,28 @@
+name: Test KOSPI200 Run
+
+on:
+  workflow_dispatch: # 직접 'Run' 버튼을 눌러 실행하고 싶을 때 사용
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          pip install pandas requests plotly beautifulsoup4 lxml
+      - name: Run Data Collection
+        run: python scripts/run_kpi200.py
+      - name: Run Visualization
+        run: python scripts/treemap_kpi200.py
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Update data and dashboard" || echo "No changes to commit"
+          git push
