@@ -1,39 +1,6 @@
-name: KOSPI200 Dashboard Auto Run
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          
-      - name: Install dependencies
+- name: Run Visualization
         run: |
-          # 시각화에 꼭 필요한 plotly와 전처리용 pandas 설치
-          pip install pandas requests plotly beautifulsoup4 lxml
-          
-      - name: Run Data Collection
-        run: python scripts/run_kpi200.py
-        
-      - name: Run Visualization
-        # 오류 발생 시 로그를 보기 위해 실행
-        run: python scripts/treemap_kpi200.py
-        
-      - name: Commit and Push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add .
-          # 변화가 있을 때만 커밋
-          git commit -m "Update: Market Data and Dashboard" || echo "No changes to commit"
-          git push
+          # 현재 어떤 라이브러리가 설치되어 있는지 확인 (디버깅용)
+          pip list
+          # 파이썬 실행 시 발생하는 모든 에러를 화면에 표시
+          python scripts/treemap_kpi200.py
