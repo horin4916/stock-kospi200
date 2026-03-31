@@ -124,38 +124,25 @@ def make_dashboard():
     summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
                    f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
-    # 트리맵 생성
+    # [128라인 부근] 트리맵 생성 (들여쓰기 주의: 함수 내부에 맞게 정렬)
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
-    apply_custom_hover(fig_i, {**l1_m, **l2_m}, is_industry=True)
-    
-    df_g = df[df['그룹사'] != '미분류']
-    fig_g = px.treemap(df_g, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
-    apply_custom_hover(fig_g, g_m, is_industry=False)
+    fig_g = px.treemap(df, path=["그룹명", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
 
-    # 2. 레이아웃 통합 (공간 최적화)
-    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.01, 0.99], vertical_spacing=0,
-                              specs=[[{"type": "xy"}], [{"type": "domain"}]])
-    
-    dashboard.add_trace(go.Scatter(x=[0], y=[0], marker=dict(opacity=0), showlegend=False), row=1, col=1)
-    
-    for tr in fig_i.data: dashboard.add_trace(tr, row=2, col=1)
-    for tr in fig_g.data: 
-        tr.visible = False
-        dashboard.add_trace(tr, row=2, col=1)
+    # 요약 데이터 한 줄 통합 (기존 <br> 제거 및 구분자 | 추가)
+    summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
+                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
-    i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
-    g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
-    
-    # 레이아웃 업데이트 (겹침 완전 해결 및 버튼 간격 최적화)
+    summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
+                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+
+    # 레이아웃 업데이트 (정중앙 정렬 및 겹침 방지)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
-        margin=dict(t=210, b=20, l=20, r=80), 
+        margin=dict(t=210, b=20, l=20, r=80),
         
         annotations=[
-            # 0번: 메인 제목
             dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
-            # 1번: 부가 설명
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
         ],
 
@@ -174,33 +161,27 @@ def make_dashboard():
             ]
         )],
         
-        # --- [색상 바] 트리맵이 내려간 만큼 시작 위치(y)와 길이(len) 조정 ---
-        coloraxis_colorscale="RdBu_r",
-        coloraxis_cmid=0,
         coloraxis_colorbar=dict(
             title="등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            len=0.75,          # 트리맵 박스 크기에 맞춰 조정
+            len=0.78,
             yanchor="top",
-            y=0.96,            # 트리맵이 시작되는 0.96 지점에 맞춤
+            y=0.96, # 트리맵 시작점인 0.96에 맞춤
             x=1.01
         )
     )
 
-    # 2번(소제목)과 3번(한 줄 요약) 위치 재설정
+    # 소제목과 한 줄 요약문을 중앙에 배치
     extra_annos = (
-        # 소제목을 버튼 바로 아래 적절한 위치에 배치
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.08, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        
-        # 한 줄 요약문을 소제목과 트리맵(0.96 시작) 사이의 정중앙인 1.02 지점에 배치
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
         dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
 
-    # 트리맵의 시작점을 0.94~0.95 정도로 낮춰서 세부 그룹 진입 시의 여유 공간 확보
-    dashboard.update_traces(domain=dict(y=[0, 0.95]), row=2, col=1)
+    # 트리맵 본체 위치를 낮춰서 세부 그룹 진입 시 겹침 방지
+    dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
 
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
