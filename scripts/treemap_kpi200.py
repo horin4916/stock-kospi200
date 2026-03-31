@@ -94,30 +94,24 @@ def make_dashboard():
 
     l1_m, l2_m, g_m = build_hover_maps(df)
 
-    # 시장 요약 데이터 계산 (5번 행용)
+    # 시장 요약 데이터 계산
     total_mcap = df['시가총액'].sum()
     avg_change = df['등락률'].mean()
     up_count = len(df[df['등락률'] > 0])
     down_count = len(df[df['등락률'] < 0])
 
-    # 1~5번행은 텍스트/버튼 공간, 6번행은 트리맵 공간
-    dashboard = make_subplots(
-        rows=2, cols=1, 
-        row_heights=[0.2, 0.8], # 상단 여백 확보
-        vertical_spacing=0.05,
-        specs=[[{"type": "xy"}], [{"type": "domain"}]]
-    )
-
-    # 산업별 트리맵
+    # 1. 트리맵 생성
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_i, {**l1_m, **l2_m}, is_industry=True)
     
-    # 그룹사별 트리맵
     df_g = df[df['그룹사'] != '미분류']
     fig_g = px.treemap(df_g, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_g, g_m, is_industry=False)
 
-    # 배경 축 숨기기용 더미 데이터 (1행)
+    # 2. 레이아웃 통합
+    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.2, 0.8], vertical_spacing=0.05,
+                              specs=[[{"type": "xy"}], [{"type": "domain"}]])
+    
     dashboard.add_trace(go.Scatter(x=[0], y=[0], marker=dict(opacity=0), showlegend=False), row=1, col=1)
     
     for tr in fig_i.data: dashboard.add_trace(tr, row=2, col=1)
@@ -125,53 +119,32 @@ def make_dashboard():
         tr.visible = False
         dashboard.add_trace(tr, row=2, col=1)
 
-    # 버튼 가시성 설정
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (1~6행 구조 통합 및 동적 제목 구현)
+    # 기본 레이아웃 설정
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
+        margin=dict(t=210, b=20, l=20, r=20),
         
-        # --- [수정 필수!] 상단 여백을 200px로 대폭 늘려서 제목을 완전히 노출시킵니다 ---
-        margin=dict(t=200, b=20, l=20, r=20), # t=200으로 설정
-        # --------------------------------------------------------------------------
-        
-        # 주석(Annotations)으로 1, 2, 5행 구현 (4행은 아래 버튼 로직에 통합)
         annotations=[
-            # 1행: 메인 제목
-            dict(text="<b>KOSPI 200 Market Map</b>", 
-                 x=0, y=1.28, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=32), xanchor="left", align="left"),
-            
-            # 2행: 부가 설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
-                 x=0, y=1.22, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=15, color="gray"), xanchor="left", align="left"),
-            
-            # 5행: 시장 요약 정보
-            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
-                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=14, color="#333"), xanchor="left", align="left")
+            # 1행 제목
+            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.30, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            # 2행 부가설명
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            # 5행 시장요약
+            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", x=0, y=1.04, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left")
         ],
 
-        # 3행: 산업별/그룹사별 버튼 (버튼 누를 때 4행 제목도 바꾸는 로직 통합)
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.16, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.18, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
-                # (🏢 산업별 보기) 클릭 시: 트리맵 가시성(i_vis) + 제목(4행)을 "산업별 트리맵"으로 변경
                 dict(label="🏢 산업별 보기", method="update", 
-                     args=[{"visible": i_vis}, 
-                           {"annotations[2].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
-                            "annotations[2].font": dict(size=20)}]), # 4행 제목 동적 변경
-                
-                # (🤝 그룹사별 보기) 클릭 시: 트리맵 가시성(g_vis) + 제목(4행)을 "그룹사별 트리맵"으로 변경
+                     args=[{"visible": i_vis}, {"annotations[3].text": "<b>산업별 트리맵 (Cap-Weighted)</b>"}]),
                 dict(label="🤝 그룹사별 보기", method="update", 
-                     args=[{"visible": g_vis}, 
-                           {"annotations[2].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
-                            "annotations[2].font": dict(size=20)}]) # 4행 제목 동적 변경
+                     args=[{"visible": g_vis}, {"annotations[3].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>"}])
             ]
         )],
         
@@ -180,24 +153,22 @@ def make_dashboard():
         coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
 
-    # 기본 4행 제목 설정 (산업별 보기가 기본이므로 "산업별 트리맵")
-    dashboard.update_layout(annotations=dashboard.layout.annotations + [
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", 
-             x=0, y=1.09, xref="paper", yref="paper", showarrow=False, 
-             font=dict(size=20), xanchor="left", align="left")
-    ])
+    # --- [에러 해결 지점] 4행 제목을 튜플 형태로 추가 ---
+    new_annotation = (dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", 
+                           x=0, y=1.10, xref="paper", yref="paper", showarrow=False, 
+                           font=dict(size=20), xanchor="left"),)
+    
+    dashboard.layout.annotations += new_annotation
+    # -----------------------------------------------
 
-    # 눈금선 완전 제거
     dashboard.update_xaxes(visible=False, row=1, col=1)
     dashboard.update_yaxes(visible=False, row=1, col=1)
 
-    # 파일 저장
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
-    
-    print(f"✅ 구조화된 대시보드 저장 완료: {daily_path.name}")
+    print(f"✅ 대시보드 저장 완료: {daily_path.name}")
 
 if __name__ == "__main__":
     make_dashboard()
