@@ -147,21 +147,21 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (간격 정밀 조정 및 색상바 일체화)
+    # 레이아웃 업데이트 (각 요소 사이 1줄 분량의 공백 확보)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
-        margin=dict(t=200, b=20, l=20, r=80), 
+        margin=dict(t=210, b=20, l=20, r=80), # 상단 여백을 210으로 약간 더 확보
         
         annotations=[
             # 0번: 메인 제목
-            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.22, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
             # 1번: 부가 설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.17, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
         ],
 
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.12, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.13, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
@@ -175,24 +175,25 @@ def make_dashboard():
             ]
         )],
         
-        # --- [최종 수정] 색상 바 높이 및 위치 최적화 ---
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
         coloraxis_colorbar=dict(
             title="등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            len=0.75,          # 트리맵의 수직 점유율에 맞춰 길이를 소폭 축소 (0.78 -> 0.75)
-            yanchor="middle",  # 중앙 정렬로 변경하여 트리맵 높이와 대칭을 맞춤
-            y=0.38,            # 트리맵 본체 위치인 0.38 지점으로 중심 이동
+            len=0.74,         # 트리맵 박스 크기에 맞춰 소폭 조정
+            yanchor="middle",
+            y=0.37,           # 트리맵 중심축에 맞춰 이동
             x=1.01
         )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 이전보다 소폭 올려 간격 확보
+    # 2번(트리맵 제목)과 3번(강화된 요약) 추가 - 한 줄씩 공백을 띄우기 위한 좌표 설정
     extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.08, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        dict(text=summary_ind, x=0, y=1.04, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        # 버튼 아래에 1줄 공백을 두고 위치 (y=1.07)
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        # 트리맵 제목과 트리맵 본체 사이에 요약문 배치 (y=1.03)
+        dict(text=summary_ind, x=0, y=1.03, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
