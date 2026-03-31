@@ -118,11 +118,11 @@ def make_dashboard():
 
     # [3. 버튼별 요약 텍스트 구성]
     # 기존의 <br>을 제거하고 중간에 적절한 구분 기호(|)를 넣어 한 줄로 만듭니다.
-summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
-               f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
-
-summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
-               f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+    summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
+                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+    
+    summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
+                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
     # 트리맵 생성
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
