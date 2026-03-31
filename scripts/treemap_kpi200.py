@@ -94,13 +94,38 @@ def make_dashboard():
 
     l1_m, l2_m, g_m = build_hover_maps(df)
 
-    # 시장 요약 데이터 계산
+    # [1. 기본 시장 요약 데이터 계산]
     total_mcap = df['시가총액'].sum()
     avg_change = df['등락률'].mean()
     up_count = len(df[df['등락률'] > 0])
     down_count = len(df[df['등락률'] < 0])
 
-    # 1. 트리맵 생성
+    # [2. 강화된 요약 정보 계산]
+    # 산업별 통계
+    ind_stats = df.groupby('1차 분류')['등락률'].mean()
+    strong_1st = ind_stats.idxmax()
+    weak_1st = ind_stats.idxmin()
+    
+    # 그룹사별 통계 (미분류 제외)
+    df_g_only = df[df['그룹사'] != '미분류']
+    grp_stats = df_g_only.groupby('그룹사')['등락률'].mean() if not df_g_only.empty else None
+    strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
+    weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
+    
+    # 등락 종목 1위
+    top_stock = df.loc[df['등락률'].idxmax()]
+    bottom_stock = df.loc[df['등락률'].idxmin()]
+
+    # [3. 버튼별 요약 텍스트 구성]
+    summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st}<br>"
+                   f"🚀 <b>상승 1위:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%) | "
+                   f"🔻 <b>하락 1위:</b> {bottom_stock['종목명']}({bottom_stock['등락률']:+.2f}%)")
+    
+    summary_grp = (f"🏛️ <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp}<br>"
+                   f"🚀 <b>상승 1위:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%) | "
+                   f"🔻 <b>하락 1위:</b> {bottom_stock['종목명']}({bottom_stock['등락률']:+.2f}%)")
+
+    # 트리맵 생성
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_i, {**l1_m, **l2_m}, is_industry=True)
     
@@ -108,8 +133,8 @@ def make_dashboard():
     fig_g = px.treemap(df_g, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_g, g_m, is_industry=False)
 
-    # 2. 레이아웃 통합
-    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.2, 0.8], vertical_spacing=0.05,
+    # 레이아웃 통합
+    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.25, 0.75], vertical_spacing=0.03,
                               specs=[[{"type": "xy"}], [{"type": "domain"}]])
     
     dashboard.add_trace(go.Scatter(x=[0], y=[0], marker=dict(opacity=0), showlegend=False), row=1, col=1)
@@ -122,41 +147,34 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (여백 상향 및 좌표 하향 조정)
+    # 레이아웃 업데이트
     dashboard.update_layout(
         template="plotly_white",
-        height=1000, 
-        
-        # --- [수정] 상단 여백을 240px로 늘려 1행 제목 공간을 확실히 확보합니다 ---
-        margin=dict(t=240, b=20, l=20, r=20), 
-        # ------------------------------------------------------------------
+        height=1050, 
+        margin=dict(t=260, b=20, l=20, r=20), # 여백을 260으로 조금 더 확보
         
         annotations=[
-            # 1행 제목: y값을 1.25로 살짝 내려서 잘림 방지
-            dict(text="<b>KOSPI 200 Market Map</b>", 
-                 x=0, y=1.25, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=32), xanchor="left"),
-            
-            # 2행 부가설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
-                 x=0, y=1.20, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=15, color="gray"), xanchor="left"),
-            
-            # 5행 시장요약: 위치 유지
+            # 0번: 메인 제목
+            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.26, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            # 1번: 부가 설명
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.21, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            # 2번: 시장 요약 (공통)
             dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
-                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=14, color="#333"), xanchor="left")
+                 x=0, y=1.03, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#555"), xanchor="left")
         ],
 
-        # 3행 버튼: y값을 1.14로 조정
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.14, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.16, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
-                     args=[{"visible": i_vis}, {"annotations[3].text": "<b>산업별 트리맵 (Cap-Weighted)</b>"}]),
+                     args=[{"visible": i_vis}, 
+                           {"annotations[3].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[4].text": summary_ind}]),
                 dict(label="🤝 그룹사별 보기", method="update", 
-                     args=[{"visible": g_vis}, {"annotations[3].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>"}])
+                     args=[{"visible": g_vis}, 
+                           {"annotations[3].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[4].text": summary_grp}])
             ]
         )],
         
@@ -165,13 +183,13 @@ def make_dashboard():
         coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
 
-    # 4행 동적 제목: y값을 1.09로 조정
-    new_annotation = (dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", 
-                           x=0, y=1.09, xref="paper", yref="paper", showarrow=False, 
-                           font=dict(size=20), xanchor="left"),)
+    # 3번(소제목)과 4번(강화된 요약) 추가
+    extra_annos = (
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.11, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        dict(text=summary_ind, x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+    )
     
-    dashboard.layout.annotations += new_annotation
-    # -----------------------------------------------
+    dashboard.layout.annotations += extra_annos
 
     dashboard.update_xaxes(visible=False, row=1, col=1)
     dashboard.update_yaxes(visible=False, row=1, col=1)
@@ -180,7 +198,7 @@ def make_dashboard():
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
-    print(f"✅ 대시보드 저장 완료: {daily_path.name}")
+    print(f"✅ 강화된 대시보드 저장 완료: {daily_path.name}")
 
 if __name__ == "__main__":
     make_dashboard()
