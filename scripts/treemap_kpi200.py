@@ -147,7 +147,7 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (버튼과 제목 사이 간격 추가 확보)
+    # 레이아웃 업데이트 (겹침 완전 해결 및 버튼 간격 최적화)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
@@ -175,28 +175,33 @@ def make_dashboard():
             ]
         )],
         
+        # --- [색상 바] 트리맵이 내려간 만큼 시작 위치(y)와 길이(len) 조정 ---
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
         coloraxis_colorbar=dict(
             title="등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            len=0.78,           # 트리맵 박스 높이에 맞춰 다시 정밀 조정
+            len=0.75,          # 트리맵 박스 크기에 맞춰 조정
             yanchor="top",
-            y=1.00,             # 트리맵 상단 끝에 고정
+            y=0.96,            # 트리맵이 시작되는 0.96 지점에 맞춤
             x=1.01
         )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 하향 조정하여 버튼과의 간격 확보
+    # 2번(소제목)과 3번(강화된 요약) 추가
     extra_annos = (
-        # 버튼(y=1.13)과의 간격을 위해 y를 1.05로 하향 (기존 1.09에서 이동)
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.05, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        # 요약문도 함께 내려서 트리맵(y=1.00 시작) 바로 위에 안착 (기존 1.05에서 이동)
-        dict(text=summary_ind, x=0, y=1.015, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        # [수정] 버튼(y=1.13)과의 간격을 절반으로 좁힘 (y=1.09)
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.09, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        # [수정] 요약문이 트리맵(y=0.96 시작)과 겹치지 않도록 y=1.025로 배치
+        dict(text=summary_ind, x=0, y=1.025, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
+
+    # --- [핵심] 트리맵 본체의 위치를 아래로 강제 이동 ---
+    # 트리맵이 차지하는 도메인의 상단 시작점을 0.96으로 낮춰서 위쪽 텍스트 공간 확보
+    dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
     
     dashboard.update_xaxes(visible=False, row=1, col=1)
     dashboard.update_yaxes(visible=False, row=1, col=1)
