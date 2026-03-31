@@ -128,8 +128,18 @@ def make_dashboard():
         )],
         
         coloraxis_colorbar=dict(
-            title="등락률(%)", thickness=20, lenmode="fraction", len=0.78,
-            yanchor="top", y=0.96, x=1.01
+            title="등락률(%)",
+            thickness=20,
+            lenmode="fraction", 
+            # 트리맵 본체 높이(0.96)에 맞춰 컬러바 높이 조정
+            len=0.76, 
+            # 컬러바의 정렬 기준을 위(top)로 잡고, 트리맵 시작점인 0.96에 배치
+            yanchor="top",
+            y=0.96, 
+            x=1.01,
+            # 깔끔하게 보이기 위해 눈금선 간격 설정 (선택 사항)
+            tickvals=[-10, -5, 0, 5, 10],
+            ticktext=["-10%", "-5%", "0%", "+5%", "+10%"]
         )
     )
 
