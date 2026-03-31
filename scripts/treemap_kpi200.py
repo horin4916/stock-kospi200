@@ -129,36 +129,39 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (1행부터 순서대로 좌표 지정)
+    # 레이아웃 업데이트 (1~6행 구조 구현)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
-        margin=dict(t=30, b=20, l=20, r=20), # 최상단 여백 최소화
+        
+        # --- [수정 필수!] 상단 여백을 충분히 벌립니다 (1행 제목이 보이기 위해) ---
+        margin=dict(t=160, b=20, l=20, r=20), # t=160으로 상단 공간 확보
+        # ---------------------------------------------------------------
         
         # 주석(Annotations)으로 1, 2, 4, 5행 구현
         annotations=[
-            # 1행: 메인 제목 (가장 높게 배치)
+            # 1행: 메인 제목 (상단 여백 t=160 공간에 배치)
             dict(text="<b>KOSPI 200 Market Map</b>", 
                  x=0, y=1.22, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=28), xanchor="left"),
+                 font=dict(size=32), xanchor="left", align="left"), # font size 상향
             
             # 2행: 부가 설명 (제목 바로 아래)
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
                  x=0, y=1.17, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=14, color="gray"), xanchor="left"),
+                 font=dict(size=15, color="gray"), xanchor="left", align="left"),
             
-            # 4행: Treemap 제목 (버튼 아래)
+            # 4행: Treemap 제목 (버튼 아래 배치)
             dict(text="<b>Market Visualization (Cap-Weighted)</b>", 
                  x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=18), xanchor="left"),
+                 font=dict(size=20), xanchor="left", align="left"),
             
             # 5행: 시장 요약 정보
             dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
                  x=0, y=1.00, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=13, color="#333"), xanchor="left")
+                 font=dict(size=14, color="#333"), xanchor="left", align="left")
         ],
 
-        # 3행: 산업별/그룹사별 버튼 (제목과 트리맵 사이 적절한 높이)
+        # 3행: 산업별/그룹사별 버튼 (제목과 트리맵 사이)
         updatemenus=[dict(
             type="buttons", direction="left", x=0, y=1.12, xanchor="left", yanchor="top",
             active=0, showactive=True,
