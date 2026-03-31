@@ -132,7 +132,7 @@ def make_dashboard():
             thickness=20,
             lenmode="fraction", 
             # 트리맵 본체 높이(0.96)에 맞춰 컬러바 높이 조정
-            len=0.76, 
+            len=0.96, 
             # 컬러바의 정렬 기준을 위(top)로 잡고, 트리맵 시작점인 0.96에 배치
             yanchor="top",
             y=0.96, 
