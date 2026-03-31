@@ -129,30 +129,38 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # --- [레이아웃 및 주석으로 1~6번 구조 구현] ---
+    # 레이아웃 업데이트 (1행부터 순서대로 좌표 지정)
     dashboard.update_layout(
         template="plotly_white",
-        height=1000, # 구조가 많아졌으므로 높이 상향
-        margin=dict(t=50, b=20, l=20, r=20),
+        height=1000, 
+        margin=dict(t=30, b=20, l=20, r=20), # 최상단 여백 최소화
         
-        # 1번 행: 메인 제목
+        # 주석(Annotations)으로 1, 2, 4, 5행 구현
         annotations=[
-            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.22, xref="paper", yref="paper", showarrow=False, font=dict(size=28)),
+            # 1행: 메인 제목 (가장 높게 배치)
+            dict(text="<b>KOSPI 200 Market Map</b>", 
+                 x=0, y=1.22, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=28), xanchor="left"),
             
-            # 2번 행: 부가 설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.16, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="gray")),
+            # 2행: 부가 설명 (제목 바로 아래)
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
+                 x=0, y=1.17, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=14, color="gray"), xanchor="left"),
             
-            # 4번 행: Treemap 제목 (버튼 아래 배치됨)
-            dict(text="<b>Market Visualization (Cap-Weighted)</b>", x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=18)),
+            # 4행: Treemap 제목 (버튼 아래)
+            dict(text="<b>Market Visualization (Cap-Weighted)</b>", 
+                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=18), xanchor="left"),
             
-            # 5번 행: 시장 요약 정보
+            # 5행: 시장 요약 정보
             dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
-                 x=0, y=0.97, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"))
+                 x=0, y=1.00, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=13, color="#333"), xanchor="left")
         ],
 
-        # 3번 행: 산업별/그룹사별 버튼
+        # 3행: 산업별/그룹사별 버튼 (제목과 트리맵 사이 적절한 높이)
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.11, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.12, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", args=[{"visible": i_vis}]),
@@ -162,7 +170,7 @@ def make_dashboard():
         
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
-        coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.8)
+        coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
 
     # 눈금선 완전 제거
