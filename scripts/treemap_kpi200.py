@@ -133,8 +133,9 @@ def make_dashboard():
     fig_g = px.treemap(df_g, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_g, g_m, is_industry=False)
 
-    # 레이아웃 통합
-    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.25, 0.75], vertical_spacing=0.03,
+    # 2. 레이아웃 통합 (공간 낭비를 줄이기 위해 높이 비율 조정)
+    # 기존 [0.25, 0.75]에서 [0.01, 0.99]로 조정하여 위쪽 빈 공간(Scatter용)을 최소화합니다.
+    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.01, 0.99], vertical_spacing=0,
                               specs=[[{"type": "xy"}], [{"type": "domain"}]])
     
     dashboard.add_trace(go.Scatter(x=[0], y=[0], marker=dict(opacity=0), showlegend=False), row=1, col=1)
@@ -150,31 +151,31 @@ def make_dashboard():
     # 레이아웃 업데이트
     dashboard.update_layout(
         template="plotly_white",
-        height=1050, 
-        margin=dict(t=260, b=20, l=20, r=20), # 여백을 260으로 조금 더 확보
+        height=950, # 전체 높이를 살짝 줄여 더 콤팩트하게 변경
+        # --- [수정] 트리맵 자체의 상단 마진을 줄여 텍스트와 붙입니다 ---
+        margin=dict(t=180, b=20, l=20, r=20), 
         
         annotations=[
-            # 0번: 메인 제목
-            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.26, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
-            # 1번: 부가 설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.21, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
-            # 2번: 시장 요약 (공통)
-            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
-                 x=0, y=1.03, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#555"), xanchor="left")
+            # 0번: 메인 제목 (y값 조정)
+            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.38, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            # 1번: 부가 설명 (y값 조정)
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.31, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            
+            # --- [삭제] 기존 2번(시장 요약: 총 시총...) 주석은 여기서 제거되었습니다 ---
         ],
 
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.16, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.23, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
                      args=[{"visible": i_vis}, 
-                           {"annotations[3].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
-                            "annotations[4].text": summary_ind}]),
+                           {"annotations[2].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[3].text": summary_ind}]),
                 dict(label="🤝 그룹사별 보기", method="update", 
                      args=[{"visible": g_vis}, 
-                           {"annotations[3].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
-                            "annotations[4].text": summary_grp}])
+                           {"annotations[2].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[3].text": summary_grp}])
             ]
         )],
         
@@ -183,10 +184,10 @@ def make_dashboard():
         coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
 
-    # 3번(소제목)과 4번(강화된 요약) 추가
+    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 조절하여 트리맵에 더 밀착
     extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.11, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        dict(text=summary_ind, x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.14, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        dict(text=summary_ind, x=0, y=1.06, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
