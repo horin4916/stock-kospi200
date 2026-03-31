@@ -94,18 +94,30 @@ def make_dashboard():
 
     l1_m, l2_m, g_m = build_hover_maps(df)
 
-    # 1. 트리맵 생성
+    # 시장 요약 데이터 계산 (5번 행용)
+    total_mcap = df['시가총액'].sum()
+    avg_change = df['등락률'].mean()
+    up_count = len(df[df['등락률'] > 0])
+    down_count = len(df[df['등락률'] < 0])
+
+    # 1~5번행은 텍스트/버튼 공간, 6번행은 트리맵 공간
+    dashboard = make_subplots(
+        rows=2, cols=1, 
+        row_heights=[0.2, 0.8], # 상단 여백 확보
+        vertical_spacing=0.05,
+        specs=[[{"type": "xy"}], [{"type": "domain"}]]
+    )
+
+    # 산업별 트리맵
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_i, {**l1_m, **l2_m}, is_industry=True)
     
+    # 그룹사별 트리맵
     df_g = df[df['그룹사'] != '미분류']
     fig_g = px.treemap(df_g, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     apply_custom_hover(fig_g, g_m, is_industry=False)
 
-    # 2. 레이아웃 통합 (Subplots)
-    dashboard = make_subplots(rows=2, cols=1, row_heights=[0.05, 0.95], vertical_spacing=0.02,
-                              specs=[[{"type": "xy"}], [{"type": "domain"}]])
-    
+    # 배경 축 숨기기용 더미 데이터 (1행)
     dashboard.add_trace(go.Scatter(x=[0], y=[0], marker=dict(opacity=0), showlegend=False), row=1, col=1)
     
     for tr in fig_i.data: dashboard.add_trace(tr, row=2, col=1)
@@ -113,39 +125,57 @@ def make_dashboard():
         tr.visible = False
         dashboard.add_trace(tr, row=2, col=1)
 
-    # 버튼 로직용 가시성 설정
+    # 버튼 가시성 설정
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
+    # --- [레이아웃 및 주석으로 1~6번 구조 구현] ---
     dashboard.update_layout(
+        template="plotly_white",
+        height=1000, # 구조가 많아졌으므로 높이 상향
+        margin=dict(t=50, b=20, l=20, r=20),
+        
+        # 1번 행: 메인 제목
+        annotations=[
+            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.22, xref="paper", yref="paper", showarrow=False, font=dict(size=28)),
+            
+            # 2번 행: 부가 설명
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.16, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="gray")),
+            
+            # 4번 행: Treemap 제목 (버튼 아래 배치됨)
+            dict(text="<b>Market Visualization (Cap-Weighted)</b>", x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=18)),
+            
+            # 5번 행: 시장 요약 정보
+            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
+                 x=0, y=0.97, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"))
+        ],
+
+        # 3번 행: 산업별/그룹사별 버튼
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.12, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.11, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
-                dict(label="산업별 보기", method="update", args=[{"visible": i_vis}]),
-                dict(label="그룹사별 보기", method="update", args=[{"visible": g_vis}])
+                dict(label="🏢 산업별 보기", method="update", args=[{"visible": i_vis}]),
+                dict(label="🤝 그룹사별 보기", method="update", args=[{"visible": g_vis}])
             ]
         )],
-        title=f"KOSPI 200 Market Map ({ref_time})",
-        title_font=dict(size=22),
-        template="plotly_white",
+        
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
-        height=900,
-        margin=dict(t=130, b=20, l=20, r=20)
+        coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.8)
     )
 
-    # 불필요한 배경 축 숨기기
+    # 눈금선 완전 제거
     dashboard.update_xaxes(visible=False, row=1, col=1)
     dashboard.update_yaxes(visible=False, row=1, col=1)
 
-    # 3. 저장
+    # 파일 저장
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
     
-    print(f"✅ 대시보드 저장 완료: {daily_path.name}")
+    print(f"✅ 구조화된 대시보드 저장 완료: {daily_path.name}")
 
 if __name__ == "__main__":
     make_dashboard()
