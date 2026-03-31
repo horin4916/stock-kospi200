@@ -147,15 +147,14 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (여백과 좌표의 균형 조정)
+    # 레이아웃 업데이트 (간격 조정 및 색상바 최적화)
     dashboard.update_layout(
         template="plotly_white",
-        height=1000, # 다시 1000으로 확보하여 제목 공간을 만듭니다.
-        # --- [중요] 상단 마진을 200으로 설정하여 제목이 들어갈 공간을 확보합니다 ---
-        margin=dict(t=200, b=20, l=20, r=20), 
+        height=1000, 
+        margin=dict(t=200, b=20, l=20, r=80), # 우측 색상바 공간 확보를 위해 r=80으로 조정
         
         annotations=[
-            # 0번: 메인 제목 (y=1.22로 안전하게 배치)
+            # 0번: 메인 제목
             dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.22, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
             # 1번: 부가 설명
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.17, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
@@ -176,15 +175,24 @@ def make_dashboard():
             ]
         )],
         
+        # --- [수정] 색상 바(Colorbar) 설정 최적화 ---
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
-        coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
+        coloraxis_colorbar=dict(
+            title="등락률(%)",
+            thickness=20,     # 바 두께
+            lenmode="fraction", 
+            len=0.78,         # 트리맵의 실제 높이 비중과 일치하도록 조정
+            yanchor="bottom",
+            y=0.02,           # 하단에서 살짝 띄움
+            x=1.02            # 트리맵 오른쪽 바짝 붙임
+        )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가 - 트리맵 바로 위에 위치하도록 y값 세밀 조정
+    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 이전보다 0.02~0.03씩 올려서 겹침 방지
     extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.05, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        dict(text=summary_ind, x=0, y=1.01, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        dict(text=summary_ind, x=0, y=1.03, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
