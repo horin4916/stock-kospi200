@@ -131,7 +131,7 @@ def make_dashboard():
             thickness=20,
             lenmode="fraction", 
             # 트리맵 본체 도메인(0.96)에 맞춰 컬러바 길이를 0.75~0.78로 조정
-            len=0.76, 
+            len=0.90, 
             yanchor="top",
             y=0.96, # 트리맵 상단 끝선에 맞춤
             x=1.01,
