@@ -147,7 +147,7 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (겹침 완전 해결 및 색상바 1:1 매칭)
+    # 레이아웃 업데이트 (버튼과 제목 사이 간격 추가 확보)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
@@ -175,29 +175,29 @@ def make_dashboard():
             ]
         )],
         
-        # --- [최종 해결] 색상 바 높이와 위치를 트리맵 박스에 직관적으로 맞춤 ---
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
         coloraxis_colorbar=dict(
             title="등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            len=0.81,           # 트리맵의 실제 수직 높이 비율에 맞춤
-            yanchor="top",      # 기준점을 상단으로 고정
-            y=1.00,             # 트리맵이 시작되는 최상단 지점에서 시작
+            len=0.78,           # 트리맵 박스 높이에 맞춰 다시 정밀 조정
+            yanchor="top",
+            y=1.00,             # 트리맵 상단 끝에 고정
             x=1.01
         )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 더 위로 배치하여 겹침 방지
+    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 하향 조정하여 버튼과의 간격 확보
     extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.09, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        # 요약문의 y를 1.05로 올려서 트리맵(1.00부터 시작)과 확실한 간격 확보
-        dict(text=summary_ind, x=0, y=1.05, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        # 버튼(y=1.13)과의 간격을 위해 y를 1.05로 하향 (기존 1.09에서 이동)
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.05, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        # 요약문도 함께 내려서 트리맵(y=1.00 시작) 바로 위에 안착 (기존 1.05에서 이동)
+        dict(text=summary_ind, x=0, y=1.015, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
-
+    
     dashboard.update_xaxes(visible=False, row=1, col=1)
     dashboard.update_yaxes(visible=False, row=1, col=1)
 
