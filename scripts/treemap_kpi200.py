@@ -120,13 +120,14 @@ def make_dashboard():
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     fig_g = px.treemap(df, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"]) # '그룹명' -> '그룹사'
 
-    # [2] 요약 텍스트 구성 (중복 제거 및 한 줄 통합)
-    # 변수명은 NameError 방지를 위해 실제 정의된 것을 사용하세요 (예: strong_1st)
+    # [수정] 요약 텍스트 구성 (변수명을 top_stock 등으로 수정)
+    # 위쪽 코드에서 정의된 실제 변수명에 맞춰 { } 내부를 수정해야 합니다.
     summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st} | "
-                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+                   f"🚀 <b>상승 1위:</b> {top_stock} | 🔻 <b>하락 1위:</b> {bottom_stock}")
 
     summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
-                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+                   f"🚀 <b>상승 1위:</b> {top_stock} | 🔻 <b>하락 1위:</b> {bottom_stock}")
+    
     # 레이아웃 업데이트 (정중앙 정렬 및 겹침 방지)
     dashboard.update_layout(
         template="plotly_white",
