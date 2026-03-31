@@ -122,23 +122,35 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 기본 레이아웃 설정
+    # 레이아웃 업데이트 (여백 상향 및 좌표 하향 조정)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
-        margin=dict(t=210, b=20, l=20, r=20),
+        
+        # --- [수정] 상단 여백을 240px로 늘려 1행 제목 공간을 확실히 확보합니다 ---
+        margin=dict(t=240, b=20, l=20, r=20), 
+        # ------------------------------------------------------------------
         
         annotations=[
-            # 1행 제목
-            dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.30, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            # 1행 제목: y값을 1.25로 살짝 내려서 잘림 방지
+            dict(text="<b>KOSPI 200 Market Map</b>", 
+                 x=0, y=1.25, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=32), xanchor="left"),
+            
             # 2행 부가설명
-            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
-            # 5행 시장요약
-            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", x=0, y=1.04, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left")
+            dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
+                 x=0, y=1.20, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=15, color="gray"), xanchor="left"),
+            
+            # 5행 시장요약: 위치 유지
+            dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
+                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=14, color="#333"), xanchor="left")
         ],
 
+        # 3행 버튼: y값을 1.14로 조정
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.18, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.14, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
@@ -153,9 +165,9 @@ def make_dashboard():
         coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
 
-    # --- [에러 해결 지점] 4행 제목을 튜플 형태로 추가 ---
+    # 4행 동적 제목: y값을 1.09로 조정
     new_annotation = (dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", 
-                           x=0, y=1.10, xref="paper", yref="paper", showarrow=False, 
+                           x=0, y=1.09, xref="paper", yref="paper", showarrow=False, 
                            font=dict(size=20), xanchor="left"),)
     
     dashboard.layout.annotations += new_annotation
