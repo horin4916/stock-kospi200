@@ -117,13 +117,12 @@ def make_dashboard():
     bottom_stock = df.loc[df['등락률'].idxmin()]
 
     # [3. 버튼별 요약 텍스트 구성]
-    summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st}<br>"
-                   f"🚀 <b>상승 1위:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%) | "
-                   f"🔻 <b>하락 1위:</b> {bottom_stock['종목명']}({bottom_stock['등락률']:+.2f}%)")
-    
-    summary_grp = (f"🏛️ <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp}<br>"
-                   f"🚀 <b>상승 1위:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%) | "
-                   f"🔻 <b>하락 1위:</b> {bottom_stock['종목명']}({bottom_stock['등락률']:+.2f}%)")
+    # 기존의 <br>을 제거하고 중간에 적절한 구분 기호(|)를 넣어 한 줄로 만듭니다.
+summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
+               f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
+
+summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
+               f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
     # 트리맵 생성
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
@@ -189,23 +188,19 @@ def make_dashboard():
         )
     )
 
-    # [수정] 2번(소제목)과 3번(강화된 요약)의 y값을 조정하여 버튼과 트리맵 사이 중앙에 배치
+    # 2번(소제목)과 3번(한 줄 요약) 위치 재설정
     extra_annos = (
-        # 소제목의 위치를 1.09에서 1.075로 살짝 내려서 버튼과의 간격을 더 확보
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        # 소제목을 버튼 바로 아래 적절한 위치에 배치
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.08, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
         
-        # 요약문의 위치를 1.025에서 1.02로 미세하게 조정하여 소제목-요약문-트리맵 간의 간격을 균등하게 배분
-        dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        # 한 줄 요약문을 소제목과 트리맵(0.96 시작) 사이의 정중앙인 1.02 지점에 배치
+        dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
 
-    # --- [핵심] 트리맵 본체의 위치를 아래로 강제 이동 ---
-    # 트리맵이 차지하는 도메인의 상단 시작점을 0.96으로 낮춰서 위쪽 텍스트 공간 확보
-    dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
-    
-    dashboard.update_xaxes(visible=False, row=1, col=1)
-    dashboard.update_yaxes(visible=False, row=1, col=1)
+    # 트리맵의 시작점을 0.94~0.95 정도로 낮춰서 세부 그룹 진입 시의 여유 공간 확보
+    dashboard.update_traces(domain=dict(y=[0, 0.95]), row=2, col=1)
 
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
