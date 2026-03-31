@@ -116,25 +116,17 @@ def make_dashboard():
     top_stock = df.loc[df['등락률'].idxmax()]
     bottom_stock = df.loc[df['등락률'].idxmin()]
 
-    # [3. 버튼별 요약 텍스트 구성]
-    # 기존의 <br>을 제거하고 중간에 적절한 구분 기호(|)를 넣어 한 줄로 만듭니다.
-    summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
-                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
-    
-    summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
-                   f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
-
-    # [128라인 부근] 트리맵 생성 (들여쓰기 주의: 함수 내부에 맞게 정렬)
+    # [1] 트리맵 생성 (들여쓰기 주의)
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
     fig_g = px.treemap(df, path=["그룹명", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
 
-    # 요약 데이터 한 줄 통합 (기존 <br> 제거 및 구분자 | 추가)
-    summary_ind = (f"📈 <b>강세 산업:</b> {strong_ind} | 📉 <b>약세 산업:</b> {weak_ind} | "
+    # [2] 요약 텍스트 구성 (한 줄 통합 버전)
+    # ※ 주의: 이전 에러에서 확인했듯이 변수명이 strong_1st 인지 strong_ind 인지 꼭 확인하세요!
+    summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st} | "
                    f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
     summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
                    f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
-
     # 레이아웃 업데이트 (정중앙 정렬 및 겹침 방지)
     dashboard.update_layout(
         template="plotly_white",
