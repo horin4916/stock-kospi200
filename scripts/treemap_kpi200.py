@@ -129,45 +129,49 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (1~6행 구조 구현)
+    # 레이아웃 업데이트 (1~6행 구조 통합 및 동적 제목 구현)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
         
-        # --- [수정 필수!] 상단 여백을 충분히 벌립니다 (1행 제목이 보이기 위해) ---
-        margin=dict(t=160, b=20, l=20, r=20), # t=160으로 상단 공간 확보
-        # ---------------------------------------------------------------
+        # --- [수정 필수!] 상단 여백을 200px로 대폭 늘려서 제목을 완전히 노출시킵니다 ---
+        margin=dict(t=200, b=20, l=20, r=20), # t=200으로 설정
+        # --------------------------------------------------------------------------
         
-        # 주석(Annotations)으로 1, 2, 4, 5행 구현
+        # 주석(Annotations)으로 1, 2, 5행 구현 (4행은 아래 버튼 로직에 통합)
         annotations=[
-            # 1행: 메인 제목 (상단 여백 t=160 공간에 배치)
+            # 1행: 메인 제목
             dict(text="<b>KOSPI 200 Market Map</b>", 
-                 x=0, y=1.22, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=32), xanchor="left", align="left"), # font size 상향
+                 x=0, y=1.28, xref="paper", yref="paper", showarrow=False, 
+                 font=dict(size=32), xanchor="left", align="left"),
             
-            # 2행: 부가 설명 (제목 바로 아래)
+            # 2행: 부가 설명
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", 
-                 x=0, y=1.17, xref="paper", yref="paper", showarrow=False, 
+                 x=0, y=1.22, xref="paper", yref="paper", showarrow=False, 
                  font=dict(size=15, color="gray"), xanchor="left", align="left"),
-            
-            # 4행: Treemap 제목 (버튼 아래 배치)
-            dict(text="<b>Market Visualization (Cap-Weighted)</b>", 
-                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
-                 font=dict(size=20), xanchor="left", align="left"),
             
             # 5행: 시장 요약 정보
             dict(text=f"시장 요약: 총 시총 {total_mcap:,}억 | 평균 등락 {avg_change:+.2f}% (▲{up_count} ▼{down_count})", 
-                 x=0, y=1.00, xref="paper", yref="paper", showarrow=False, 
+                 x=0, y=1.04, xref="paper", yref="paper", showarrow=False, 
                  font=dict(size=14, color="#333"), xanchor="left", align="left")
         ],
 
-        # 3행: 산업별/그룹사별 버튼 (제목과 트리맵 사이)
+        # 3행: 산업별/그룹사별 버튼 (버튼 누를 때 4행 제목도 바꾸는 로직 통합)
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.12, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.16, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
-                dict(label="🏢 산업별 보기", method="update", args=[{"visible": i_vis}]),
-                dict(label="🤝 그룹사별 보기", method="update", args=[{"visible": g_vis}])
+                # (🏢 산업별 보기) 클릭 시: 트리맵 가시성(i_vis) + 제목(4행)을 "산업별 트리맵"으로 변경
+                dict(label="🏢 산업별 보기", method="update", 
+                     args=[{"visible": i_vis}, 
+                           {"annotations[2].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[2].font": dict(size=20)}]), # 4행 제목 동적 변경
+                
+                # (🤝 그룹사별 보기) 클릭 시: 트리맵 가시성(g_vis) + 제목(4행)을 "그룹사별 트리맵"으로 변경
+                dict(label="🤝 그룹사별 보기", method="update", 
+                     args=[{"visible": g_vis}, 
+                           {"annotations[2].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
+                            "annotations[2].font": dict(size=20)}]) # 4행 제목 동적 변경
             ]
         )],
         
@@ -175,6 +179,13 @@ def make_dashboard():
         coloraxis_cmid=0,
         coloraxis_colorbar=dict(title="등락률(%)", x=1.02, len=0.7, y=0.4)
     )
+
+    # 기본 4행 제목 설정 (산업별 보기가 기본이므로 "산업별 트리맵")
+    dashboard.update_layout(annotations=dashboard.layout.annotations + [
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", 
+             x=0, y=1.09, xref="paper", yref="paper", showarrow=False, 
+             font=dict(size=20), xanchor="left", align="left")
+    ])
 
     # 눈금선 완전 제거
     dashboard.update_xaxes(visible=False, row=1, col=1)
