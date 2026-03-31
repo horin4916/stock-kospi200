@@ -13,130 +13,103 @@ DATA_RAW_DIR = BASE_DIR / "data" / "raw"
 DOCS_DIR = BASE_DIR / "docs"
 DOCS_DAILY_DIR = DOCS_DIR / "daily"
 
-# GitHub Actions 환경에서 폴더가 없으면 에러가 나므로 강제 생성
 DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_DAILY_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- [2] 데이터 로드 로직 ---
 def find_latest_csv():
-    """가장 최근에 수집된 CSV 파일을 찾습니다."""
     files = list(DATA_RAW_DIR.glob("kpi200_*.csv"))
     files = [f for f in files if "latest" not in f.name]
-    
     if not files:
         latest_file = DATA_RAW_DIR / "kpi200_latest.csv"
         if latest_file.exists(): return latest_file
         raise FileNotFoundError("데이터 파일(CSV)을 찾을 수 없습니다.")
-        
     return max(files, key=os.path.getmtime)
 
 def load_data(csv_file):
     df = pd.read_csv(csv_file, encoding="utf-8-sig")
     ref_time = str(df["기준시각"].iloc[0]) if not df.empty else "Unknown Time"
-    
-    # 텍스트 데이터 정제
     for col in ["그룹사", "1차 분류", "2차 분류", "종목명"]:
         df[col] = df[col].fillna("미분류").astype(str).str.strip()
-    
-    # 수치 데이터 정제
     for col in ["시가총액", "현재가", "등락률"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    
     df["시가총액"] = df["시가총액"].astype(int)
-    
-    # 호버 텍스트 생성
     df["종목_hover"] = df.apply(lambda r: 
         f"<b>{r['종목명']} ({r['그룹사']})</b><br>"
         f"시가총액: {r['시가총액']:,}억<br>"
         f"현재가: {r['현재가']:,}원 ({r['등락률']:+.2f}%)", axis=1)
-    
     return df, ref_time
 
-# --- [3] 호버 메시지 빌더 ---
-def build_hover_maps(df):
-    # 산업별(1차, 2차) 요약 정보
-    l1 = df.groupby("1차 분류").agg({"시가총액":"sum", "등락률":"mean"})
-    l1_map = {k: f"<b>{k}</b><br>총 시총: {int(v['시가총액']):,}억<br>평균 등락: {v['등락률']:+.2f}%" for k,v in l1.to_dict('index').items()}
-    
-    l2 = df.groupby(["1차 분류", "2차 분류"]).agg({"시가총액":"sum", "등락률":"mean"})
-    l2_map = {f"{k[0]}||{k[1]}": f"<b>{k[1]}</b><br>총 시총: {int(v['시가총액']):,}억<br>평균 등락: {v['등락률']:+.2f}%" for k,v in l2.to_dict('index').items()}
-    
-    # 그룹사별 요약 정보
-    grp = df.groupby("그룹사").agg({"시가총액":"sum", "등락률":"mean"})
-    g_map = {k: f"<b>{k}</b><br>그룹 시총: {int(v['시가총액']):,}억<br>평균 등락: {v['등락률']:+.2f}%" for k,v in grp.to_dict('index').items()}
-    
-    return l1_map, l2_map, g_map
-
-def apply_custom_hover(fig, hover_map, is_industry=True):
-    for trace in fig.data:
-        if not hasattr(trace, 'ids') or trace.ids is None: continue
-        hovertexts = []
-        for i, node_id in enumerate(trace.ids):
-            parts = node_id.split('/')
-            if len(parts) == 1:
-                hovertexts.append(hover_map.get(parts[0], ""))
-            elif is_industry and len(parts) == 2:
-                hovertexts.append(hover_map.get(f"{parts[0]}||{parts[1]}", ""))
-            else:
-                hovertexts.append(trace.customdata[i][0] if trace.customdata is not None else "")
-        trace.hovertext = hovertexts
-        trace.hovertemplate = "%{hovertext}<extra></extra>"
-
-# --- [4] 메인 실행 함수 ---
+# --- [3] 메인 실행 함수 ---
 def make_dashboard():
     try:
         csv_file = find_latest_csv()
         df, ref_time = load_data(csv_file)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error loading data: {e}")
         return
 
-    l1_m, l2_m, g_m = build_hover_maps(df)
-
-    # [1. 기본 시장 요약 데이터 계산]
-    total_mcap = df['시가총액'].sum()
-    avg_change = df['등락률'].mean()
-    up_count = len(df[df['등락률'] > 0])
-    down_count = len(df[df['등락률'] < 0])
-
-    # [2. 강화된 요약 정보 계산]
-    # 산업별 통계
+    # [1. 시장 요약 데이터 계산]
     ind_stats = df.groupby('1차 분류')['등락률'].mean()
     strong_1st = ind_stats.idxmax()
     weak_1st = ind_stats.idxmin()
     
-    # 그룹사별 통계 (미분류 제외)
     df_g_only = df[df['그룹사'] != '미분류']
     grp_stats = df_g_only.groupby('그룹사')['등락률'].mean() if not df_g_only.empty else None
     strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
     weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
     
-    # 등락 종목 1위
-    top_stock = df.loc[df['등락률'].idxmax()]
-    bottom_stock = df.loc[df['등락률'].idxmin()]
+    # 등락 종목 1위 (종목명 추출)
+    top_stock_name = df.loc[df['등락률'].idxmax(), '종목명']
+    top_stock_val = df.loc[df['등락률'].idxmax(), '등락률']
+    bottom_stock_name = df.loc[df['등락률'].idxmin(), '종목명']
+    bottom_stock_val = df.loc[df['등락률'].idxmin(), '등락률']
 
-    # [1] 트리맵 생성 (컬럼명을 '그룹사'로 수정)
-    fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
-    fig_g = px.treemap(df, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"]) # '그룹명' -> '그룹사'
+    # [2. 대시보드 객체 생성]
+    dashboard = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.1, 0.9],
+        vertical_spacing=0.03,
+        specs=[[{"type": "xy"}], [{"type": "treemap"}]]
+    )
 
-    # [수정] 요약 텍스트 구성 (변수명을 top_stock 등으로 수정)
-    # 위쪽 코드에서 정의된 실제 변수명에 맞춰 { } 내부를 수정해야 합니다.
+    # [3. 트리맵 피겨 생성]
+    fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", 
+                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", color_continuous_midpoint=0)
+    fig_g = px.treemap(df, path=["그룹사", "종목명"], values="시가총액", color="등락률", 
+                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", color_continuous_midpoint=0)
+
+    # [4. 요약 텍스트 구성 (한 줄 통합)]
     summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st} | "
-                   f"🚀 <b>상승 1위:</b> {top_stock} | 🔻 <b>하락 1위:</b> {bottom_stock}")
+                   f"🚀 <b>상승 1위:</b> {top_stock_name}({top_stock_val:+.2f}%) | 🔻 <b>하락 1위:</b> {bottom_stock_name}({bottom_stock_val:+.2f}%)")
 
     summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
-                   f"🚀 <b>상승 1위:</b> {top_stock} | 🔻 <b>하락 1위:</b> {bottom_stock}")
-    
-    # 레이아웃 업데이트 (정중앙 정렬 및 겹침 방지)
+                   f"🚀 <b>상승 1위:</b> {top_stock_name}({top_stock_val:+.2f}%) | 🔻 <b>하락 1위:</b> {bottom_stock_name}({bottom_stock_val:+.2f}%)")
+
+    # [5. 트리맵 데이터를 대시보드에 추가]
+    # fig_i는 인덱스 0번 trace, fig_g는 1번 trace가 됩니다.
+    for trace in fig_i.data:
+        dashboard.add_trace(trace, row=2, col=1)
+    for trace in fig_g.data:
+        trace.visible = False
+        dashboard.add_trace(trace, row=2, col=1)
+
+    # [6. 레이아웃 업데이트]
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
         margin=dict(t=210, b=20, l=20, r=80),
+        coloraxis_colorscale="RdBu_r",
+        coloraxis_cmid=0,
         
         annotations=[
+            # 0: 메인제목, 1: 부제
             dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            # 2: 소제목(가변), 3: 요약문(가변)
+            dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+            dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
         ],
 
         updatemenus=[dict(
@@ -144,43 +117,34 @@ def make_dashboard():
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
-                     args=[{"visible": i_vis}, 
+                     args=[{"visible": [False, True, False]}, # XY축(False), 산업별(True), 그룹사별(False)
                            {"annotations[2].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
                             "annotations[3].text": summary_ind}]),
                 dict(label="🤝 그룹사별 보기", method="update", 
-                     args=[{"visible": g_vis}, 
+                     args=[{"visible": [False, False, True]}, # XY축(False), 산업별(False), 그룹사별(True)
                            {"annotations[2].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
                             "annotations[3].text": summary_grp}])
             ]
         )],
         
         coloraxis_colorbar=dict(
-            title="등락률(%)",
-            thickness=20,
-            lenmode="fraction", 
-            len=0.78,
-            yanchor="top",
-            y=0.96, # 트리맵 시작점인 0.96에 맞춤
-            x=1.01
+            title="등락률(%)", thickness=20, lenmode="fraction", len=0.78,
+            yanchor="top", y=0.96, x=1.01
         )
     )
 
-    # 소제목과 한 줄 요약문을 중앙에 배치
-    extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
-    )
-    
-    dashboard.layout.annotations += extra_annos
-
-    # 트리맵 본체 위치를 낮춰서 세부 그룹 진입 시 겹침 방지
+    # [7. 트리맵 본체 하향 조정 (겹침 방지 핵심)]
     dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
+    
+    # 호버 템플릿 강제 적용
+    dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
+    # [8. 파일 저장]
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
-    print(f"✅ 강화된 대시보드 저장 완료: {daily_path.name}")
+    print(f"✅ 대시보드 저장 완료: {daily_path.name}")
 
 if __name__ == "__main__":
     make_dashboard()
