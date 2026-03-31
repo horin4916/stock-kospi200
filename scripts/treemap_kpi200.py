@@ -189,12 +189,13 @@ def make_dashboard():
         )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가
+    # [수정] 2번(소제목)과 3번(강화된 요약)의 y값을 조정하여 버튼과 트리맵 사이 중앙에 배치
     extra_annos = (
-        # [수정] 버튼(y=1.13)과의 간격을 절반으로 좁힘 (y=1.09)
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.09, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        # [수정] 요약문이 트리맵(y=0.96 시작)과 겹치지 않도록 y=1.025로 배치
-        dict(text=summary_ind, x=0, y=1.025, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        # 소제목의 위치를 1.09에서 1.075로 살짝 내려서 버튼과의 간격을 더 확보
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        
+        # 요약문의 위치를 1.025에서 1.02로 미세하게 조정하여 소제목-요약문-트리맵 간의 간격을 균등하게 배분
+        dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
