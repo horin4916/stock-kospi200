@@ -147,11 +147,11 @@ def make_dashboard():
     i_vis = [True] + [True]*len(fig_i.data) + [False]*len(fig_g.data)
     g_vis = [True] + [False]*len(fig_i.data) + [True]*len(fig_g.data)
     
-    # 레이아웃 업데이트 (간격 조정 및 색상바 최적화)
+    # 레이아웃 업데이트 (간격 정밀 조정 및 색상바 일체화)
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
-        margin=dict(t=200, b=20, l=20, r=80), # 우측 색상바 공간 확보를 위해 r=80으로 조정
+        margin=dict(t=200, b=20, l=20, r=80), 
         
         annotations=[
             # 0번: 메인 제목
@@ -175,24 +175,24 @@ def make_dashboard():
             ]
         )],
         
-        # --- [수정] 색상 바(Colorbar) 설정 최적화 ---
+        # --- [최종 수정] 색상 바 높이 및 위치 최적화 ---
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
         coloraxis_colorbar=dict(
             title="등락률(%)",
-            thickness=20,     # 바 두께
+            thickness=20,
             lenmode="fraction", 
-            len=0.78,         # 트리맵의 실제 높이 비중과 일치하도록 조정
-            yanchor="bottom",
-            y=0.02,           # 하단에서 살짝 띄움
-            x=1.02            # 트리맵 오른쪽 바짝 붙임
+            len=0.75,          # 트리맵의 수직 점유율에 맞춰 길이를 소폭 축소 (0.78 -> 0.75)
+            yanchor="middle",  # 중앙 정렬로 변경하여 트리맵 높이와 대칭을 맞춤
+            y=0.38,            # 트리맵 본체 위치인 0.38 지점으로 중심 이동
+            x=1.01
         )
     )
 
-    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 이전보다 0.02~0.03씩 올려서 겹침 방지
+    # 2번(소제목)과 3번(강화된 요약) 추가 - y값을 이전보다 소폭 올려 간격 확보
     extra_annos = (
-        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-        dict(text=summary_ind, x=0, y=1.03, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
+        dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.08, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
+        dict(text=summary_ind, x=0, y=1.04, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="#333"), xanchor="left", align="left")
     )
     
     dashboard.layout.annotations += extra_annos
