@@ -116,12 +116,12 @@ def make_dashboard():
     top_stock = df.loc[df['등락률'].idxmax()]
     bottom_stock = df.loc[df['등락률'].idxmin()]
 
-    # [1] 트리맵 생성 (들여쓰기 주의)
+    # [1] 트리맵 생성 (컬럼명을 '그룹사'로 수정)
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
-    fig_g = px.treemap(df, path=["그룹명", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"])
+    fig_g = px.treemap(df, path=["그룹사", "종목명"], values="시가총액", color="등락률", custom_data=["종목_hover"]) # '그룹명' -> '그룹사'
 
-    # [2] 요약 텍스트 구성 (한 줄 통합 버전)
-    # ※ 주의: 이전 에러에서 확인했듯이 변수명이 strong_1st 인지 strong_ind 인지 꼭 확인하세요!
+    # [2] 요약 텍스트 구성 (중복 제거 및 한 줄 통합)
+    # 변수명은 NameError 방지를 위해 실제 정의된 것을 사용하세요 (예: strong_1st)
     summary_ind = (f"📈 <b>강세 산업:</b> {strong_1st} | 📉 <b>약세 산업:</b> {weak_1st} | "
                    f"🚀 <b>상승 1위:</b> {top_up_stock} | 🔻 <b>하락 1위:</b> {top_down_stock}")
 
