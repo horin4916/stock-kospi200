@@ -87,15 +87,15 @@ def make_dashboard():
     summary_grp = (f"📈 <b>강세 그룹:</b> {strong_grp} | 📉 <b>약세 그룹:</b> {weak_grp} | "
                    f"🚀 <b>상승 1위:</b> {top_stock_name}({top_stock_val:+.2f}%) | 🔻 <b>하락 1위:</b> {bottom_stock_name}({bottom_stock_val:+.2f}%)")
 
-    # [5. 트리맵 데이터를 대시보드에 추가]
-    # fig_i는 인덱스 0번 trace, fig_g는 1번 trace가 됩니다.
+    # [5] 트리맵 데이터를 대시보드에 추가
+    # 중요: 여기서 추가되는 순서가 visible [True, False]의 순서를 결정합니다.
     for trace in fig_i.data:
-        dashboard.add_trace(trace, row=2, col=1)
+        dashboard.add_trace(trace, row=2, col=1) # Trace 0: 산업별
     for trace in fig_g.data:
         trace.visible = False
-        dashboard.add_trace(trace, row=2, col=1)
+        dashboard.add_trace(trace, row=2, col=1) # Trace 1: 그룹사별
 
-    # [6. 레이아웃 업데이트]
+    # [6] 레이아웃 업데이트
     dashboard.update_layout(
         template="plotly_white",
         height=1000, 
@@ -104,10 +104,8 @@ def make_dashboard():
         coloraxis_cmid=0,
         
         annotations=[
-            # 0: 메인제목, 1: 부제
             dict(text="<b>KOSPI 200 Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
             dict(text=f"기준 시각: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
-            # 2: 소제목(가변), 3: 요약문(가변)
             dict(text="<b>산업별 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
             dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
         ],
@@ -117,11 +115,12 @@ def make_dashboard():
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 보기", method="update", 
-                     args=[{"visible": [False, True, False]}, # XY축(False), 산업별(True), 그룹사별(False)
+                     # visible 리스트: [산업별 트레이스, 그룹사별 트레이스] 순서
+                     args=[{"visible": [True, False]}, 
                            {"annotations[2].text": "<b>산업별 트리맵 (Cap-Weighted)</b>",
                             "annotations[3].text": summary_ind}]),
                 dict(label="🤝 그룹사별 보기", method="update", 
-                     args=[{"visible": [False, False, True]}, # XY축(False), 산업별(False), 그룹사별(True)
+                     args=[{"visible": [False, True]}, 
                            {"annotations[2].text": "<b>그룹사별 트리맵 (Cap-Weighted)</b>",
                             "annotations[3].text": summary_grp}])
             ]
@@ -131,19 +130,17 @@ def make_dashboard():
             title="등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            # 트리맵 본체 높이(0.96)에 맞춰 컬러바 높이 조정
-            len=0.96, 
-            # 컬러바의 정렬 기준을 위(top)로 잡고, 트리맵 시작점인 0.96에 배치
+            # 트리맵 본체 도메인(0.96)에 맞춰 컬러바 길이를 0.75~0.78로 조정
+            len=0.76, 
             yanchor="top",
-            y=0.96, 
+            y=0.96, # 트리맵 상단 끝선에 맞춤
             x=1.01,
-            # 깔끔하게 보이기 위해 눈금선 간격 설정 (선택 사항)
             tickvals=[-10, -5, 0, 5, 10],
             ticktext=["-10%", "-5%", "0%", "+5%", "+10%"]
         )
     )
 
-    # [7. 트리맵 본체 하향 조정 (겹침 방지 핵심)]
+    # [7] 트리맵 위치 강제 고정 (컬러바와 세로 높이 동기화)
     dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
     
     # 호버 템플릿 강제 적용
