@@ -58,17 +58,18 @@ def make_weekly_dashboard():
         print(f"❌ Error loading weekly data: {e}")
         return
 
-    # [1. 주간 통계 계산]
-    ind_stats = df.groupby('1차 분류')['등락률'].mean()
-    strong_1st, weak_1st = ind_stats.idxmax(), ind_stats.idxmin()
+    # [데이터 계산]
+    top5 = df.nlargest(5, '등락률')
+    bottom5 = df.nsmallest(5, '등락률')
     
-    df_g_only = df[df['그룹사'] != '미분류']
-    grp_stats = df_g_only.groupby('그룹사')['등락률'].mean() if not df_g_only.empty else None
-    strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
-    weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
+    # 텍스트 포맷팅 (예: 삼성전자(+2.5%) / SK하이닉스(+1.2%))
+    top5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in top5.iterrows()])
+    bottom5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in bottom5.iterrows()])
     
-    top_stock = df.loc[df['등락률'].idxmax()]
-    bottom_stock = df.loc[df['등락률'].idxmin()]
+    # 산업별 평균 계산 및 정렬
+    ind_avg = df.groupby('1차 분류')['등락률'].mean().sort_values(ascending=False)
+    strong_inds = ", ".join(ind_avg.index[:3])  # 상위 3개 산업
+    weak_inds = ", ".join(ind_avg.index[-3:])   # 하위 3개 산업
 
     # [2. 대시보드 객체 생성]
     dashboard = make_subplots(
@@ -108,10 +109,17 @@ def make_weekly_dashboard():
         margin=dict(t=210, b=20, l=20, r=80),
         
         annotations=[
-            dict(text="<b>KOSPI 200 Weekly Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
-            dict(text=f"기간: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
-            dict(text="<b>산업별 주간 등락 리포트</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-            dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left")
+            # [Level 1] 메인 타이틀 및 기간
+            dict(text="<b>KOSPI 200 Weekly Market Map</b>", x=0, y=1.35, xref="paper", yref="paper", showarrow=False, font=dict(size=30), xanchor="left"),
+            dict(text=f"분석 기간: {ref_time} | Visualization by HORIN", x=0, y=1.29, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="gray"), xanchor="left"),
+        
+            # [Level 2] 섹터 요약 (강세/약세 산업)
+            dict(text=f"🏢 <b>주간 주도 산업:</b> <span style='color:red'>{strong_inds}</span>", x=0, y=1.20, xref="paper", yref="paper", showarrow=False, font=dict(size=15), xanchor="left"),
+            dict(text=f"📉 <b>주간 소외 산업:</b> <span style='color:blue'>{weak_inds}</span>", x=0, y=1.15, xref="paper", yref="paper", showarrow=False, font=dict(size=15), xanchor="left"),
+        
+            # [Level 3] 종목 랭킹 (상/하위 5종목) - 트리맵 바로 위에 배치
+            dict(text=f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}", x=0, y=1.06, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#d62728"), xanchor="left"),
+            dict(text=f"🔻 <b>WEEKLY BOTTOM 5:</b> {bottom5_str}", x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#1f77b4"), xanchor="left")
         ],
 
         updatemenus=[dict(
