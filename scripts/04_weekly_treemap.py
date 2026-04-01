@@ -105,8 +105,8 @@ def make_weekly_dashboard():
     # [6. 레이아웃 및 컬러바 최적화]
     dashboard.update_layout(
         template="plotly_white",
-        height=1000, 
-        margin=dict(t=210, b=20, l=20, r=80),
+        height=1100, 
+        margin=dict(t=250, b=20, l=20, r=80),
         
         annotations=[
             # [Level 1] 메인 타이틀 및 기간
@@ -123,7 +123,7 @@ def make_weekly_dashboard():
         ],
 
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.13, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.25, xanchor="left", yanchor="top",
             buttons=[
                 dict(label="🏢 산업별 주간", method="update", 
                      args=[{"visible": [True, True, False]}, 
