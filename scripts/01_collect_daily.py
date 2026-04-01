@@ -109,16 +109,30 @@ def run_kpi200():
         master_df.to_csv(MASTER_FILE, index=False, encoding="utf-8-sig")
         print(f"신규 종목 {len(missing_names)}개 마스터 추가 완료")
 
-    # 3. 병합 및 저장
+    # 3. 병합 및 파일명 생성
     final_df = pd.merge(latest_df, master_df, on="종목명", how="left")
     final_df.insert(0, "기준시각", ref_time)
 
-    # 타임스탬프 기반 파일명 생성 (예: kpi200_2026-03-30_1530_close.csv)
+    # 타임스탬프 기반 파일명 생성 (예: 2026-03-30_1530_close)
     ts_filename = make_detailed_timestamp(ref_time)
     
+    # [핵심 추가] 오늘 날짜의 'close' 파일이 이미 있는지 체크
+    if "_close" in ts_filename:
+        # 파일명에서 날짜 부분(YYYY-MM-DD)만 추출
+        today_date = ts_filename.split('_')[0] 
+        # 해당 날짜의 close 파일이 이미 존재하는지 검색
+        existing_close = list(DATA_RAW_DIR.glob(f"kpi200_{today_date}_*_close.csv"))
+        
+        if existing_close:
+            print(f"⚠️ 이미 오늘({today_date})의 종가 데이터가 존재합니다. 저장을 건너뜁니다.")
+            # 최신 데이터(latest.html용)는 그래도 갱신하고 싶다면 아래 latest_path 부분만 남기세요.
+            return 
+
+    # 4. 저장 경로 설정
     archive_path = DATA_RAW_DIR / f"kpi200_{ts_filename}.csv"
     latest_path = DATA_RAW_DIR / "kpi200_latest.csv"
 
+    # 파일 저장
     final_df.to_csv(archive_path, index=False, encoding="utf-8-sig")
     final_df.to_csv(latest_path, index=False, encoding="utf-8-sig")
 
