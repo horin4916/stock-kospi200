@@ -94,11 +94,12 @@ def make_weekly_dashboard():
                        range_color=[-10, 10], color_continuous_midpoint=0)
 
     # [4. 요약 텍스트 구성]
-    summary_ind = (f"📈 <b>주간 강세 산업:</b> {strong_1st} | 📉 <b>약세:</b> {weak_1st} | "
-                   f"🚀 <b>Top:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%)")
+    # 위에서 계산한 strong_inds(문자열)와 top5(데이터프레임)를 활용하세요.
+    top_stock_name = top5.iloc[0]['종목명']
+    top_stock_val = top5.iloc[0]['등락률']
 
-    summary_grp = (f"📈 <b>주간 강세 그룹:</b> {strong_grp} | 📉 <b>약세:</b> {weak_grp} | "
-                   f"🚀 <b>Top:</b> {top_stock['종목명']}({top_stock['등락률']:+.2f}%)")
+    summary_ind = (f"📈 <b>주간 강세 산업:</b> {strong_inds} | "
+                   f"🚀 <b>Top:</b> {top_stock_name}({top_stock_val:+.2f}%)")
 
     # [5. 트레이스 추가]
     for trace in fig_i.data:
