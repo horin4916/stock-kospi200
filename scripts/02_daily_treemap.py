@@ -30,11 +30,19 @@ def find_latest_csv():
 def load_data(csv_file):
     df = pd.read_csv(csv_file, encoding="utf-8-sig")
     ref_time = str(df["기준시각"].iloc[0]) if not df.empty else "Unknown Time"
+    
     for col in ["그룹사", "1차 분류", "2차 분류", "종목명"]:
         df[col] = df[col].fillna("미분류").astype(str).str.strip()
+    
     for col in ["시가총액", "현재가", "등락률"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    
+    # --- [수정 포인트 1] 데이터 자체를 소수점 2자리로 반올림 ---
+    df["등락률"] = df["등락률"].round(2)
+    
     df["시가총액"] = df["시가총액"].astype(int)
+    
+    # 여기서 :+.2f%가 적용되어 있으므로 위에서 round(2)를 하면 완벽해집니다.
     df["종목_hover"] = df.apply(lambda r: 
         f"<b>{r['종목명']} ({r['그룹사']})</b><br>"
         f"시가총액: {r['시가총액']:,}억<br>"
@@ -60,7 +68,10 @@ def make_dashboard():
     strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
     weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
     
-    # 등락 종목 1위 (종목명 추출)
+    # --- [수정 포인트 2] 등락률 데이터 최종 확정 ---
+    df['등락률'] = df['등락률'].round(2)
+
+    # 등락 종목 1위 추출 (반올림된 값 사용)
     top_stock_name = df.loc[df['등락률'].idxmax(), '종목명']
     top_stock_val = df.loc[df['등락률'].idxmax(), '등락률']
     bottom_stock_name = df.loc[df['등락률'].idxmin(), '종목명']
