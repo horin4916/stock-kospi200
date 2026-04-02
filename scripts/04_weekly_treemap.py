@@ -28,7 +28,6 @@ def find_latest_weekly_csv():
 
 def load_data(csv_file):
     df = pd.read_csv(csv_file, encoding="utf-8-sig")
-    # 전처리 단계에서 주입한 '03.20~03.27 Weekly' 형태의 라벨 활용
     ref_time = str(df["기준시각"].iloc[0]) if not df.empty else "Weekly"
     
     for col in ["그룹사", "1차 분류", "2차 분류", "종목명"]:
@@ -38,9 +37,12 @@ def load_data(csv_file):
     for col in ["시가총액", "현재가", "등락률"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     
+    # --- [수정 포인트 1] 데이터 로드 즉시 반올림 ---
+    df["등락률"] = df["등락률"].round(2)
+    
     df["시가총액"] = df["시가총액"].astype(int)
     
-    # 호버 텍스트 (주간 등락률 명시)
+    # 호버 텍스트 (여기서 :+.2f%가 적용되어 있어도 원본 데이터가 round되어야 깨끗합니다)
     df["종목_hover"] = df.apply(lambda r: 
         f"<b>{r['종목명']} ({r['그룹사']})</b><br>"
         f"시가총액: {r['시가총액']:,}억<br>"
@@ -58,11 +60,14 @@ def make_weekly_dashboard():
         print(f"❌ Error loading weekly data: {e}")
         return
 
+    # --- [수정 포인트 2] 계산 직전 다시 한번 데이터 확인 ---
+    df['등락률'] = df['등락률'].round(2)
+
     # [데이터 계산]
     top5 = df.nlargest(5, '등락률')
     bottom5 = df.nsmallest(5, '등락률')
     
-    # 텍스트 포맷팅 (예: 삼성전자(+2.5%) / SK하이닉스(+1.2%))
+    # 여기서 row['등락률']이 이미 round(2) 상태이므로 깔끔하게 출력됩니다.
     top5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in top5.iterrows()])
     bottom5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in bottom5.iterrows()])
     
