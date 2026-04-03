@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 
 # 경로 설정
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,8 +9,29 @@ DAILY_DIR = DOCS_DIR / "daily"
 WEEKLY_DIR = DOCS_DIR / "weekly"
 
 def generate_index():
-    # 1. 파일 목록 가져오기 및 정렬 (최신순)
-    daily_files = sorted(list(DAILY_DIR.glob("*.html")), reverse=True)
+    # 1. 모든 파일 가져오기
+    all_daily_files = list(DAILY_DIR.glob("*.html"))
+    
+    # 2. [핵심] 종가 파일만 필터링 (예: 15시 30분 이후 생성된 파일)
+    # 파일명 예시: dashboard_202604011540.html (15시 40분 파일)
+    daily_final_files = []
+    
+    # 날짜별로 그룹화하여 가장 마지막 시간대 파일만 선택하는 로직
+    date_map = {}
+    for f in all_daily_files:
+        # 파일명에서 날짜(8자리)와 시간(4자리) 추출
+        match = re.search(r'dashboard_(\d{8})(\d{4})', f.name)
+        if match:
+            date, time = match.groups()
+            # 1530(오후 3시 30분) 이후 파일만 후보로 등록
+            if int(time) >= 1530:
+                if date not in date_map or int(time) > int(date_map[date][0]):
+                    date_map[date] = (time, f)
+
+    # 필터링된 파일들만 리스트에 담고 최신순 정렬
+    daily_files = sorted([val[1] for val in date_map.values()], key=lambda x: x.name, reverse=True)
+    
+    # 주간 파일은 그대로 가져오기
     weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
 
     # 2. HTML 템플릿 생성
