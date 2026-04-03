@@ -1,12 +1,11 @@
 name: KOSPI200 Daily & Weekly Dashboard
 
 on:
-  workflow_dispatch: # 수동 실행 버튼 유지 (테스트용)
+  workflow_dispatch: # 수동 실행 버튼
   schedule:
-    # ⚠️ 주의: GitHub Actions는 UTC(세계 표준시)를 기준입니다.
-    # 한국 시간(KST) = UTC + 9시간
-    # 오후 4시 10분(16:10) 실행을 원하면 -> UTC 오전 7시 10분으로 설정
-    - cron: '55 6 * * 1-5' # 월~금, 한국 시간 오후 4시 10분
+    # 한국 시간 오후 4시 10분 (UTC 오전 7시 10분)
+    # 서버 대기열을 고려해 정각이 아닌 '10분'으로 설정하는 것이 안정적입니다.
+    - cron: '10 7 * * 1-5' 
 
 jobs:
   build:
@@ -16,6 +15,8 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 히스토리를 가져와 Rebase 오류 방지
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,29 +27,36 @@ jobs:
         run: |
           pip install pandas requests plotly beautifulsoup4 lxml
           
-      # [1] 공통/일간 작업: 데이터 수집 및 일간 트리맵 생성
-      - name: Daily Data Collection
-        run: python scripts/01_collect_daily.py
-        
-      - name: Daily Visualization
-        run: python scripts/02_daily_treemap.py
+      # [1] 공통 작업: 데이터 수집 및 일간 트리맵 생성
+      - name: Daily Data Collection & Visualization
+        run: |
+          python scripts/01_collect_daily.py
+          python scripts/02_daily_treemap.py
         
       # [2] 금요일 전용 작업: 주간 요약 데이터 및 트리맵 생성
-      # github.event.schedule이 금요일(5)이거나 수동 실행 시 금요일인 경우 작동
       - name: Weekly Summary & Visualization (Friday Only)
-        if: github.event.schedule == '10 7 * * 5' || contains(github.event.inputs.tags, 'weekly') || success()
         run: |
-          # 오늘이 금요일인지 파이썬으로 한 번 더 체크하여 실행
-          python -c "from datetime import datetime; import os; exit(0 if datetime.now().weekday() == 4 else 1)" && (
+          # 파이썬으로 오늘이 금요일(4)인지 체크 후 실행
+          python -c "from datetime import datetime; import sys; sys.exit(0 if datetime.now().weekday() == 4 else 1)" && (
+            echo "Today is Friday. Running weekly tasks..."
             python scripts/03_process_weekly.py
             python scripts/04_weekly_treemap.py
           ) || echo "Not Friday, skipping weekly tasks."
 
-      # [3] 변경사항 저장
+      # [3] 인덱스 페이지 업데이트 (보관함 목록 갱신)
+      - name: Update Index Page
+        run: python scripts/make_index.py
+
+      # [4] 모든 변경사항 저장 및 푸시
       - name: Commit and Push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          git commit -m "Auto-update: Daily/Weekly Market Data [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
-          git push
+          
+          # 변경사항이 있을 때만 커밋
+          git commit -m "Auto-update: Market Data & Index [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
+          
+          # 원격 저장소의 최신 상태를 가져와 합친 후 푸시 (충돌 방지)
+          git pull --rebase origin main
+          git push origin main
