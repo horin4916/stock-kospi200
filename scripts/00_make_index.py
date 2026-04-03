@@ -9,49 +9,40 @@ DAILY_DIR = DOCS_DIR / "daily"
 WEEKLY_DIR = DOCS_DIR / "weekly"
 
 def generate_index():
-    # '_close'가 포함된 파일만 찾아서 날짜순 정렬
+    # 1. 파일 수집
+    # 종가(_close) 파일만 가져옵니다. (장중 파일은 인덱스에서 제외)
     daily_files = sorted(list(DAILY_DIR.glob("*_close.html")), reverse=True)
-    weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
-    
-       
-    # 2. [핵심] 종가 파일만 필터링 (예: 15시 30분 이후 생성된 파일)
-    # 파일명 예시: dashboard_202604011540.html (15시 40분 파일)
-    daily_final_files = []
-    
-    # 날짜별로 그룹화하여 가장 마지막 시간대 파일만 선택하는 로직
-    date_map = {}
-    for f in all_daily_files:
-        # 파일명에서 날짜(8자리)와 시간(4자리) 추출
-        match = re.search(r'dashboard_(\d{8})(\d{4})', f.name)
-        if match:
-            date, time = match.groups()
-            # 1530(오후 3시 30분) 이후 파일만 후보로 등록
-            if int(time) >= 1530:
-                if date not in date_map or int(time) > int(date_map[date][0]):
-                    date_map[date] = (time, f)
-
-    # 필터링된 파일들만 리스트에 담고 최신순 정렬
-    daily_files = sorted([val[1] for val in date_map.values()], key=lambda x: x.name, reverse=True)
-    
-    # 주간 파일은 그대로 가져오기
     weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
 
     # 2. HTML 템플릿 생성
+    # 팁: f.name[10:20] 대신 파일명에서 날짜를 예쁘게 뽑는 로직을 적용했습니다.
+    daily_list_items = []
+    for f in daily_files:
+        # 파일명(dashboard_20260403_close.html)에서 날짜 추출
+        date_match = re.search(r'(\d{4})(\d{2})(\d{2})', f.name)
+        date_display = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}" if date_match else f.name
+        
+        item = f"<li><a href='daily/{f.name}'>{date_display} 종가 리포트</a></li>"
+        daily_list_items.append(item)
+
+    weekly_list_items = [f"<li><a href='weekly/{f.name}'>{f.name}</a></li>" for f in weekly_files]
+
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>KOSPI 200 Dashboard Index</title>
         <style>
-            body {{ font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; }}
-            h1 {{ border-bottom: 2px solid #333; padding-bottom: 10px; }}
-            .section {{ margin-bottom: 30px; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }}
+            h1 {{ border-bottom: 3px solid #007bff; padding-bottom: 10px; }}
+            .section {{ margin-bottom: 40px; }}
+            h2 {{ color: #555; }}
             ul {{ list-style: none; padding: 0; }}
-            li {{ margin: 10px 0; border: 1px solid #eee; padding: 10px; border-radius: 5px; }}
-            li:hover {{ background: #f9f9f9; }}
-            a {{ text-decoration: none; color: #007bff; font-weight: bold; }}
-            .date {{ color: #666; font-size: 0.9em; margin-left: 10px; }}
+            li {{ margin: 12px 0; border: 1px solid #eee; padding: 15px; border-radius: 8px; transition: 0.2s; }}
+            li:hover {{ background: #f8f9fa; border-color: #007bff; }}
+            a {{ text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.1em; }}
         </style>
     </head>
     <body>
@@ -60,16 +51,20 @@ def generate_index():
         <div class="section">
             <h2>📅 주간 리포트 (Weekly)</h2>
             <ul>
-                {"".join([f"<li><a href='weekly/{f.name}'>{f.name}</a></li>" for f in weekly_files])}
+                {"".join(weekly_list_items) if weekly_list_items else "<li>아직 리포트가 없습니다.</li>"}
             </ul>
         </div>
 
         <div class="section">
-            <h2>🕒 일간/시간별 리포트 (Daily)</h2>
+            <h2>🕒 일간 종가 리포트 (Daily Final)</h2>
             <ul>
-                {"".join([f"<li><a href='daily/{f.name}'>{f.name}</a><span class='date'>{f.name[10:20]}</span></li>" for f in daily_files])}
+                {"".join(daily_list_items) if daily_list_items else "<li>아직 리포트가 없습니다.</li>"}
             </ul>
         </div>
+        
+        <footer style="margin-top: 50px; color: #aaa; font-size: 0.8em; text-align: center;">
+            Last updated: {os.popen('date').read()}
+        </footer>
     </body>
     </html>
     """
@@ -78,7 +73,7 @@ def generate_index():
     with open(DOCS_DIR / "index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
     
-    print("✅ Index 페이지가 생성되었습니다: docs/index.html")
+    print(f"✅ Index 페이지 갱신 완료 (일간 {len(daily_files)}건, 주간 {len(weekly_files)}건)")
 
 if __name__ == "__main__":
     generate_index()
