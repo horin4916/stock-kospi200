@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pathlib import Path
 import shutil
+# [02_daily_treemap.py 저장 부분 수정]
+import datetime
 
 # --- [1] 경로 및 폴더 설정 ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -158,11 +160,32 @@ def make_dashboard():
     dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
     # [8. 파일 저장]
+    # 8-1. 파일명용 타임스탬프 생성 (예: 202604031540)
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
-    daily_path = DOCS_DAILY_DIR / f"dashboard_{ts}.html"
+    
+    # 8-2. 종가 여부 판별 (데이터 기준 시각이 15:30 이후인지 확인)
+    is_close = False
+    time_match = re.search(r'(\d{2}):(\d{2})', ref_time)
+    if time_match:
+        hh, mm = map(int, time_match.groups())
+        # 15:30분 정각을 포함하여 그 이후 시각은 모두 종가(Close)로 간주
+        if (hh == 15 and mm >= 30) or hh >= 16:
+            is_close = True
+
+    # 8-3. 파일명 결정 및 저장
+    suffix = "_close" if is_close else ""
+    daily_filename = f"dashboard_{ts}{suffix}.html"
+    daily_path = DOCS_DAILY_DIR / daily_filename
+    
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
+    
+    # 8-4. 최신 파일 갱신 (latest.html)
+    # 종가 파일이든 인트라데이 파일이든 실행 시점의 가장 최신본을 루트에 복사합니다.
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
+    
     print(f"✅ 대시보드 저장 완료: {daily_path.name}")
+    if is_close:
+        print("🚩 해당 리포트는 '장 마감(Close)' 데이터로 분류되었습니다.")
 
 if __name__ == "__main__":
     make_dashboard()
