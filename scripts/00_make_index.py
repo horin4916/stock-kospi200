@@ -9,9 +9,11 @@ DAILY_DIR = DOCS_DIR / "daily"
 WEEKLY_DIR = DOCS_DIR / "weekly"
 
 def generate_index():
-    # 1. 모든 파일 가져오기
-    all_daily_files = list(DAILY_DIR.glob("*.html"))
+    # '_close'가 포함된 파일만 찾아서 날짜순 정렬
+    daily_files = sorted(list(DAILY_DIR.glob("*_close.html")), reverse=True)
+    weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
     
+       
     # 2. [핵심] 종가 파일만 필터링 (예: 15시 30분 이후 생성된 파일)
     # 파일명 예시: dashboard_202604011540.html (15시 40분 파일)
     daily_final_files = []
