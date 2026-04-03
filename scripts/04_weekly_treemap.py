@@ -155,15 +155,18 @@ def make_weekly_dashboard():
     dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
     # [8. 파일 저장]
-    # 파일명에서 날짜 추출 (예: 03.20~03.27 -> 0327)
     date_label = re.sub(r'[^0-9]', '', ref_time.split('~')[-1])[:4]
     save_path = DOCS_WEEKLY_DIR / f"weekly_dashboard_{date_label}.html"
     
     dashboard.write_html(str(save_path), include_plotlyjs="cdn", config={"displaylogo": False})
-    # 최신 파일 복사
+
+    # --- [이 부분을 추가하세요] ---
+    # 주간 최신 파일을 별도의 'weekly_latest.html'로 복사하여 관리합니다.
     shutil.copy(save_path, DOCS_DIR / "weekly_latest.html")
+    # ----------------------------
     
     print(f"✅ 주간 대시보드 저장 완료: {save_path.name}")
+    print(f"✅ 주간 최신본 업데이트 완료: weekly_latest.html")
 
 if __name__ == "__main__":
     make_weekly_dashboard()
