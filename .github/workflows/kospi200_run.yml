@@ -4,19 +4,15 @@ on:
   workflow_dispatch: # 수동 실행 버튼
   schedule:
     # 한국 시간 오후 4시 10분 (UTC 오전 7시 10분)
-    # 서버 대기열을 고려해 정각이 아닌 '10분'으로 설정하는 것이 안정적입니다.
     - cron: '10 7 * * 1-5' 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 아래 env 섹션을 추가합니다.
     env:
-      TZ: Asia/Seoul 
-
-    steps:
-      - uses: actions/checkout@v4
-      # ... 이하 동일
+      TZ: Asia/Seoul # 서버 시간을 한국 시간으로 고정
+    permissions:
+      contents: write # 파일 수정 및 푸시 권한 부여
       
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +26,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          pip install pandas requests plotly beautifulsoup4 lxml
+          pip install pandas requests plotly beautifulsoup4 lxml pytz
           
       # [1] 공통 작업: 데이터 수집 및 일간 트리맵 생성
       - name: Daily Data Collection & Visualization
