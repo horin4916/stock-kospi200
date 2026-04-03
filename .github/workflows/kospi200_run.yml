@@ -45,7 +45,7 @@ jobs:
 
       # [3] 인덱스 페이지 업데이트 (보관함 목록 갱신)
       - name: Update Index Page
-        run: python scripts/make_index.py
+        run: python scripts/00_make_index.py
 
       # [4] 모든 변경사항 저장 및 푸시
       - name: Commit and Push changes
