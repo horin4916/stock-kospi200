@@ -159,33 +159,38 @@ def make_dashboard():
     # 호버 템플릿 강제 적용
     dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
-    # [8. 파일 저장]
-    # 8-1. 파일명용 타임스탬프 생성 (예: 202604031540)
+    # [8. 파일 저장 - 최종 통합 버전]
+    # 8-1. 타임스탬프 및 날짜 추출
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
+    date_str = ts[:8]
     
-    # 8-2. 종가 여부 판별 (데이터 기준 시각이 15:30 이후인지 확인)
+    # 8-2. 종가 여부 판별 (15:30 기준)
     is_close = False
     time_match = re.search(r'(\d{2}):(\d{2})', ref_time)
     if time_match:
         hh, mm = map(int, time_match.groups())
-        # 15:30분 정각을 포함하여 그 이후 시각은 모두 종가(Close)로 간주
         if (hh == 15 and mm >= 30) or hh >= 16:
             is_close = True
 
-    # 8-3. 파일명 결정 및 저장
-    suffix = "_close" if is_close else ""
-    daily_filename = f"dashboard_{ts}{suffix}.html"
+    # 8-3. 파일명 규칙 적용 (CSV와 일치)
+    if is_close:
+        daily_filename = f"dashboard_{date_str}_close.html"
+    else:
+        daily_filename = f"dashboard_{ts}_intraday.html"
+
     daily_path = DOCS_DAILY_DIR / daily_filename
     
+    # 8-4. HTML 저장 및 latest 업데이트
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
-    
-    # 8-4. 최신 파일 갱신 (latest.html)
-    # 종가 파일이든 인트라데이 파일이든 실행 시점의 가장 최신본을 루트에 복사합니다.
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
     
-    print(f"✅ 대시보드 저장 완료: {daily_path.name}")
+    # 8-5. 종가 확정 시 당일 인트라데이 파일 삭제 (폴더 정리)
     if is_close:
-        print("🚩 해당 리포트는 '장 마감(Close)' 데이터로 분류되었습니다.")
+        for old_html in DOCS_DAILY_DIR.glob(f"dashboard_{date_str}_*_intraday.html"):
+            old_html.unlink()
+        print(f"🧹 {date_str} 종가 확정: 인트라데이 리포트를 정리했습니다.")
+
+    print(f"✅ 리포트 저장 완료: {daily_filename}")
 
 if __name__ == "__main__":
     make_dashboard()
