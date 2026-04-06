@@ -180,10 +180,15 @@ def make_dashboard():
 
     daily_path = DOCS_DAILY_DIR / daily_filename
     
-    # 8-4. HTML 저장 및 latest 업데이트
+    # [8-4. HTML 저장 및 최신 파일 업데이트]
     dashboard.write_html(str(daily_path), include_plotlyjs="cdn", config={"displaylogo": False})
+    
+    # 🌟 수정 포인트: index.html로 복사 (GitHub Pages 메인 화면용)
+    # docs/latest.html 뿐만 아니라 docs/index.html로도 복사하여 접속 시 바로 보이게 합니다.
+    shutil.copy(daily_path, DOCS_DIR / "index.html")
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
     
+        
     # 8-5. 종가 확정 시 당일 인트라데이 파일 삭제 (폴더 정리)
     if is_close:
         for old_html in DOCS_DAILY_DIR.glob(f"dashboard_{date_str}_*_intraday.html"):
