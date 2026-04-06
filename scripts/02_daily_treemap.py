@@ -164,13 +164,18 @@ def make_dashboard():
     ts = re.sub(r'[^0-9]', '', ref_time)[:12]
     date_str = ts[:8]
     
-    # 8-2. 종가 여부 판별 (15:30 기준)
+    # --- [수정된 8-2. 종가 여부 판별 로직] ---
     is_close = False
-    time_match = re.search(r'(\d{2}):(\d{2})', ref_time)
-    if time_match:
-        hh, mm = map(int, time_match.groups())
-        if (hh == 15 and mm >= 30) or hh >= 16:
-            is_close = True
+    # 데이터에 "장마감"이라는 글자가 포함되어 있는지 직접 확인
+    if "장마감" in ref_time:
+        is_close = True
+    else:
+        # 글자가 없을 경우를 대비한 시간 백업 로직
+        time_match = re.search(r'(\d{2}):(\d{2})', ref_time)
+        if time_match:
+            hh, mm = map(int, time_match.groups())
+            if (hh == 15 and mm >= 30) or hh >= 16:
+                is_close = True
 
     # 8-3. 파일명 규칙 적용 (CSV와 일치)
     if is_close:
