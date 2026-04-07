@@ -190,7 +190,7 @@ def make_dashboard():
     
     # 🌟 수정 포인트: index.html로 복사 (GitHub Pages 메인 화면용)
     # docs/latest.html 뿐만 아니라 docs/index.html로도 복사하여 접속 시 바로 보이게 합니다.
-    shutil.copy(daily_path, DOCS_DIR / "index.html")
+
     shutil.copy(daily_path, DOCS_DIR / "latest.html")
     
         
