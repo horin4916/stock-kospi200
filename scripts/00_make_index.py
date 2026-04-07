@@ -7,20 +7,25 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DOCS_DIR = BASE_DIR / "docs"
 DAILY_DIR = DOCS_DIR / "daily"
+WEEKLY_DIR = DOCS_DIR / "weekly"
 
 def generate_index():
-    # 1. 파일 수집 (종가 리포트만)
+    # 1. 데이터 수집
     daily_files = sorted(list(DAILY_DIR.glob("dashboard_*_close.html")), reverse=True)
-    
     daily_data = []
     for f in daily_files:
-        # 파일명에서 날짜 추출 (dashboard_20260406_close.html -> 2026-04-06)
         date_match = re.search(r'(\d{4})(\d{2})(\d{2})', f.name)
         if date_match:
             date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-            daily_data.append({"name": f.name, "date": date_str})
+            daily_data.append({{"name": f.name, "date": date_str, "path": "daily/" + f.name}})
 
-    # 2. HTML 템플릿 (CSS/JS 중괄호 이스케이프 완료)
+    weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
+    weekly_data = []
+    for f in weekly_files:
+        display_name = f.name.replace(".html", "").replace("weekly_", "")
+        weekly_data.append({{"name": f.name, "date": display_name, "path": "weekly/" + f.name}})
+
+    # 2. HTML 템플릿
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -30,94 +35,101 @@ def generate_index():
         <title>KOSPI 200 Archive | HORIN</title>
         <style>
             body {{ font-family: 'Pretendard', -apple-system, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }}
-            .container {{ max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }}
-            h1 {{ font-size: 24px; color: #1a202c; margin-bottom: 8px; text-align: center; }}
-            .subtitle {{ text-align: center; color: #718096; margin-bottom: 30px; font-size: 14px; }}
+            .container {{ max-width: 800px; margin: 0 auto; }}
+            .card {{ background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 30px; }}
             
-            .filter-bar {{ display: flex; gap: 8px; margin-bottom: 25px; justify-content: center; }}
-            input[type="date"] {{ border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px; outline: none; }}
-            button {{ background: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }}
+            h1 {{ font-size: 26px; color: #1a202c; text-align: center; margin-bottom: 40px; }}
+            h2 {{ font-size: 20px; color: #2d3748; border-left: 5px solid #3182ce; padding-left: 12px; margin-bottom: 20px; }}
+            
+            .filter-bar {{ display: flex; gap: 8px; margin-bottom: 15px; }}
+            input[type="date"] {{ border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 8px; outline: none; }}
+            button.btn {{ background: #3182ce; color: white; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }}
             button.reset {{ background: #edf2f7; color: #4a5568; }}
 
             ul {{ list-style: none; padding: 0; margin: 0; border-top: 1px solid #edf2f7; }}
-            li {{ display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #edf2f7; transition: background 0.2s; }}
-            li:hover {{ background: #f7fafc; }}
-            .date-label {{ font-weight: 700; color: #2d3748; }}
-            .link-btn {{ text-decoration: none; background: white; border: 1px solid #3182ce; color: #3182ce; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; }}
+            li {{ display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 1px solid #edf2f7; }}
+            .date-label {{ font-weight: 600; color: #4a5568; }}
+            .link-btn {{ text-decoration: none; border: 1px solid #3182ce; color: #3182ce; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }}
             .link-btn:hover {{ background: #3182ce; color: white; }}
 
-            .pagination {{ display: flex; justify-content: center; gap: 6px; margin-top: 30px; }}
-            .page-btn {{ border: 1px solid #e2e8f0; background: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; }}
+            .pagination {{ display: flex; justify-content: center; gap: 6px; margin-top: 20px; }}
+            .page-btn {{ border: 1px solid #e2e8f0; background: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }}
             .page-btn.active {{ background: #3182ce; color: white; border-color: #3182ce; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>📊 인베스트먼트 다이어리</h1>
-            <p class="subtitle">KOSPI 200 종가 리포트 아카이브</p>
+            <h1>📊 인베스트먼트 다이어리 아카이브</h1>
 
-            <div class="filter-bar">
-                <input type="date" id="targetDate">
-                <button onclick="searchDate()">이동</button>
-                <button class="reset" onclick="resetAll()">전체</button>
+            <div class="card">
+                <h2>📅 주간 리포트 (Weekly)</h2>
+                <ul id="weeklyList"></ul>
+                <div id="weeklyPager" class="pagination"></div>
             </div>
 
-            <ul id="list"></ul>
-            <div id="pager" class="pagination"></div>
+            <div class="card">
+                <h2>🕒 일간 종가 리포트 (Daily)</h2>
+                <div class="filter-bar">
+                    <input type="date" id="dailyDate">
+                    <button class="btn" onclick="searchDaily()">이동</button>
+                    <button class="btn reset" onclick="resetDaily()">전체</button>
+                </div>
+                <ul id="dailyList"></ul>
+                <div id="dailyPager" class="pagination"></div>
+            </div>
 
-            <footer style="margin-top: 40px; text-align: center; font-size: 12px; color: #a0aec0;">
+            <footer style="text-align: center; font-size: 12px; color: #a0aec0; margin-top: 40px;">
                 마지막 업데이트: {os.popen('date').read().strip()}
             </footer>
         </div>
 
         <script>
-            const data = {json.dumps(daily_data)};
-            let currentData = [...data];
-            const size = 10;
-            let page = 1;
+            const rawDaily = {json.dumps(daily_data)};
+            const rawWeekly = {json.dumps(weekly_data)};
+            
+            let filteredDaily = [...rawDaily];
+            const pageSize = 10;
 
-            function show(p) {{
-                page = p;
-                const start = (p-1) * size;
-                const list = document.getElementById('list');
-                list.innerHTML = '';
+            // 공통 렌더링 함수
+            function render(type, data, page) {{
+                const start = (page - 1) * pageSize;
+                const items = data.slice(start, start + pageSize);
+                const listEl = document.getElementById(type + 'List');
+                const pagerEl = document.getElementById(type + 'Pager');
                 
-                const items = currentData.slice(start, start + size);
-                if (items.length === 0) {{
-                    list.innerHTML = '<li style="justify-content: center; color: #a0aec0;">리포트가 없습니다.</li>';
-                }}
-                
+                listEl.innerHTML = items.length ? '' : '<li style="justify-content:center; color:#ccc;">데이터가 없습니다.</li>';
                 items.forEach(d => {{
-                    list.innerHTML += `<li>
+                    listEl.innerHTML += `<li>
                         <span class="date-label">${{d.date}}</span>
-                        <a href="daily/${{d.name}}" class="link-btn">리포트 보기</a>
+                        <a href="${{d.path}}" class="link-btn">리포트 보기</a>
                     </li>`;
                 }});
-                drawPager();
-            }}
 
-            function drawPager() {{
-                const total = Math.ceil(currentData.length / size);
-                const pager = document.getElementById('pager');
-                pager.innerHTML = '';
-                for(let i=1; i<=total; i++) {{
-                    pager.innerHTML += `<button class="page-btn ${{i===page?'active':''}}" onclick="show(${{i}})">${{i}}</button>`;
+                // 페이징 생성
+                const total = Math.ceil(data.length / pageSize);
+                pagerEl.innerHTML = '';
+                if(total > 1) {{
+                    for(let i=1; i<=total; i++) {{
+                        pagerEl.innerHTML += `<button class="page-btn ${{i===page?'active':''}}" onclick="render('${{type}}', ${{type==='daily'?'filteredDaily':'rawWeekly'}}, ${{i}})">${{i}}</button>`;
+                    }}
                 }}
             }}
 
-            function searchDate() {{
-                const val = document.getElementById('targetDate').value;
+            function searchDaily() {{
+                const val = document.getElementById('dailyDate').value;
                 if(!val) return;
-                currentData = data.filter(d => d.date === val);
-                show(1);
+                filteredDaily = rawDaily.filter(d => d.date === val);
+                render('daily', filteredDaily, 1);
             }}
 
-            function resetAll() {{
-                currentData = [...data];
-                show(1);
+            function resetDaily() {{
+                filteredDaily = [...rawDaily];
+                render('daily', filteredDaily, 1);
             }}
 
-            show(1);
+            // 초기 로드
+            render('weekly', rawWeekly, 1);
+            render('daily', filteredDaily, 1);
         </script>
     </body>
     </html>
@@ -125,7 +137,7 @@ def generate_index():
     
     with open(DOCS_DIR / "index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
-    print(f"✅ 랜딩 페이지 생성 완료: {len(daily_data)}개의 리포트")
+    print(f"✅ 구역 분리형 인덱스 생성 완료 (일간: {len(daily_data)}, 주간: {len(weekly_data)})")
 
 if __name__ == "__main__":
     generate_index()
