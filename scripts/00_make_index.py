@@ -10,22 +10,24 @@ DAILY_DIR = DOCS_DIR / "daily"
 WEEKLY_DIR = DOCS_DIR / "weekly"
 
 def generate_index():
-    # 1. 데이터 수집
+    # 1. 데이터 수집 (여기는 일반 파이썬 코드이므로 중괄호 하나만 사용)
     daily_files = sorted(list(DAILY_DIR.glob("dashboard_*_close.html")), reverse=True)
     daily_data = []
     for f in daily_files:
         date_match = re.search(r'(\d{4})(\d{2})(\d{2})', f.name)
         if date_match:
             date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-            daily_data.append({{"name": f.name, "date": date_str, "path": "daily/" + f.name}})
+            # 수정 포인트: 중괄호 하나만 사용
+            daily_data.append({"name": f.name, "date": date_str, "path": "daily/" + f.name})
 
     weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
     weekly_data = []
     for f in weekly_files:
         display_name = f.name.replace(".html", "").replace("weekly_", "")
-        weekly_data.append({{"name": f.name, "date": display_name, "path": "weekly/" + f.name}})
+        # 수정 포인트: 중괄호 하나만 사용
+        weekly_data.append({"name": f.name, "date": display_name, "path": "weekly/" + f.name})
 
-    # 2. HTML 템플릿
+    # 2. HTML 템플릿 (f-string 시작 - 여기서는 CSS/JS를 위해 {{ }} 사용)
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -90,7 +92,6 @@ def generate_index():
             let filteredDaily = [...rawDaily];
             const pageSize = 10;
 
-            // 공통 렌더링 함수
             function render(type, data, page) {{
                 const start = (page - 1) * pageSize;
                 const items = data.slice(start, start + pageSize);
@@ -105,7 +106,6 @@ def generate_index():
                     </li>`;
                 }});
 
-                // 페이징 생성
                 const total = Math.ceil(data.length / pageSize);
                 pagerEl.innerHTML = '';
                 if(total > 1) {{
@@ -127,7 +127,6 @@ def generate_index():
                 render('daily', filteredDaily, 1);
             }}
 
-            // 초기 로드
             render('weekly', rawWeekly, 1);
             render('daily', filteredDaily, 1);
         </script>
