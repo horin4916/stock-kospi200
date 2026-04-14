@@ -17,32 +17,26 @@ DOCS_WEEKLY_DIR = DOCS_DIR / "weekly"
 DATA_WEEKLY_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_WEEKLY_DIR.mkdir(parents=True, exist_ok=True)
 
-# --- [2] 최신 주간 데이터 로드 로직 ---
+# --- [2] 데이터 로드 로직 ---
 def find_latest_weekly_csv():
-    # weekly_summary 스크립트가 만든 파일들 탐색
     files = list(DATA_WEEKLY_DIR.glob("weekly_kpi200_*.csv"))
     if not files:
         raise FileNotFoundError("주간 데이터 파일(CSV)을 찾을 수 없습니다. 전처리 스크립트를 먼저 실행하세요.")
-    # 가장 최근 수정된 파일 반환
     return max(files, key=os.path.getmtime)
 
 def load_data(csv_file):
     df = pd.read_csv(csv_file, encoding="utf-8-sig")
-    ref_time = str(df["기준시각"].iloc[0]) if not df.empty else "Weekly"
+    ref_time = str(df["기준시각"].iloc[0]) if not df.empty else "Weekly Period"
     
     for col in ["그룹사", "1차 분류", "2차 분류", "종목명"]:
         df[col] = df[col].fillna("미분류").astype(str).str.strip()
     
-    # 숫자형 변환
     for col in ["시가총액", "현재가", "등락률"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     
-    # --- [수정 포인트 1] 데이터 로드 즉시 반올림 ---
     df["등락률"] = df["등락률"].round(2)
-    
     df["시가총액"] = df["시가총액"].astype(int)
     
-    # 호버 텍스트 (여기서 :+.2f%가 적용되어 있어도 원본 데이터가 round되어야 깨끗합니다)
     df["종목_hover"] = df.apply(lambda r: 
         f"<b>{r['종목명']} ({r['그룹사']})</b><br>"
         f"시가총액: {r['시가총액']:,}억<br>"
@@ -60,21 +54,16 @@ def make_weekly_dashboard():
         print(f"❌ Error loading weekly data: {e}")
         return
 
-    # --- [수정 포인트 2] 계산 직전 다시 한번 데이터 확인 ---
-    df['등락률'] = df['등락률'].round(2)
-
     # [데이터 계산]
     top5 = df.nlargest(5, '등락률')
     bottom5 = df.nsmallest(5, '등락률')
     
-    # 여기서 row['등락률']이 이미 round(2) 상태이므로 깔끔하게 출력됩니다.
     top5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in top5.iterrows()])
     bottom5_str = "  |  ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in bottom5.iterrows()])
     
-    # 산업별 평균 계산 및 정렬
     ind_avg = df.groupby('1차 분류')['등락률'].mean().sort_values(ascending=False)
-    strong_inds = ", ".join(ind_avg.index[:3])  # 상위 3개 산업
-    weak_inds = ", ".join(ind_avg.index[-3:])   # 하위 3개 산업
+    strong_inds = ", ".join(ind_avg.index[:3])
+    weak_inds = ", ".join(ind_avg.index[-3:])
 
     # [2. 대시보드 객체 생성]
     dashboard = make_subplots(
@@ -84,7 +73,7 @@ def make_weekly_dashboard():
         specs=[[{"type": "xy"}], [{"type": "treemap"}]]
     )
 
-    # [3. 트리맵 생성 (주간 변동성에 맞춰 컬러 범위 ±10%로 확장)]
+    # [3. 트리맵 생성]
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", 
                        custom_data=["종목_hover"], color_continuous_scale="RdBu_r", 
                        range_color=[-10, 10], color_continuous_midpoint=0)
@@ -93,13 +82,13 @@ def make_weekly_dashboard():
                        custom_data=["종목_hover"], color_continuous_scale="RdBu_r", 
                        range_color=[-10, 10], color_continuous_midpoint=0)
 
-    # [4. 요약 텍스트 구성]
-    # 위에서 계산한 strong_inds(문자열)와 top5(데이터프레임)를 활용하세요.
+    # [4. 요약 텍스트 정의 (오류 해결 지점)]
     top_stock_name = top5.iloc[0]['종목명']
     top_stock_val = top5.iloc[0]['등락률']
-
-    summary_ind = (f"📈 <b>주간 강세 산업:</b> {strong_inds} | "
-                   f"🚀 <b>Top:</b> {top_stock_name}({top_stock_val:+.2f}%)")
+    
+    # 버튼 클릭 시 바뀔 텍스트들 미리 정의
+    summary_ind_text = f"🏢 <b>주간 주도 산업:</b> <span style='color:red'>{strong_inds}</span>"
+    summary_grp_text = f"🤝 <b>그룹사별 리포트:</b> <span style='color:red'>{top_stock_name}</span> 등락 주도"
 
     # [5. 트레이스 추가]
     for trace in fig_i.data:
@@ -108,23 +97,24 @@ def make_weekly_dashboard():
         trace.visible = False
         dashboard.add_trace(trace, row=2, col=1)
 
-    # [6. 레이아웃 및 컬러바 최적화]
+    # [6. 레이아웃 설정]
     dashboard.update_layout(
         template="plotly_white",
         height=1100, 
         margin=dict(t=250, b=20, l=20, r=80),
         
         annotations=[
-            # [Level 1] 메인 타이틀 및 기간
+            # 인덱스 0: 메인 타이틀
             dict(text="<b>KOSPI 200 Weekly Market Map</b>", x=0, y=1.35, xref="paper", yref="paper", showarrow=False, font=dict(size=30), xanchor="left"),
+            # 인덱스 1: 분석 기간
             dict(text=f"분석 기간: {ref_time} | Visualization by HORIN", x=0, y=1.29, xref="paper", yref="paper", showarrow=False, font=dict(size=14, color="gray"), xanchor="left"),
-        
-            # [Level 2] 섹터 요약 (강세/약세 산업)
-            dict(text=f"🏢 <b>주간 주도 산업:</b> <span style='color:red'>{strong_inds}</span>", x=0, y=1.20, xref="paper", yref="paper", showarrow=False, font=dict(size=15), xanchor="left"),
+            # 인덱스 2: 산업/그룹사 요약 (버튼으로 변경될 부분)
+            dict(text=summary_ind_text, x=0, y=1.20, xref="paper", yref="paper", showarrow=False, font=dict(size=15), xanchor="left"),
+            # 인덱스 3: 소외 산업
             dict(text=f"📉 <b>주간 소외 산업:</b> <span style='color:blue'>{weak_inds}</span>", x=0, y=1.15, xref="paper", yref="paper", showarrow=False, font=dict(size=15), xanchor="left"),
-        
-            # [Level 3] 종목 랭킹 (상/하위 5종목) - 트리맵 바로 위에 배치
+            # 인덱스 4: TOP 5
             dict(text=f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}", x=0, y=1.06, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#d62728"), xanchor="left"),
+            # 인덱스 5: BOTTOM 5
             dict(text=f"🔻 <b>WEEKLY BOTTOM 5:</b> {bottom5_str}", x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#1f77b4"), xanchor="left")
         ],
 
@@ -133,10 +123,10 @@ def make_weekly_dashboard():
             buttons=[
                 dict(label="🏢 산업별 주간", method="update", 
                      args=[{"visible": [True, True, False]}, 
-                           {"annotations[2].text": "<b>산업별 주간 등락 리포트</b>", "annotations[3].text": summary_ind}]),
+                           {"annotations[2].text": summary_ind_text}]),
                 dict(label="🤝 그룹사별 주간", method="update", 
                      args=[{"visible": [True, False, True]}, 
-                           {"annotations[2].text": "<b>그룹사별 주간 등락 리포트</b>", "annotations[3].text": summary_grp}])
+                           {"annotations[2].text": summary_grp_text}])
             ]
         )],
         
@@ -150,20 +140,20 @@ def make_weekly_dashboard():
         )
     )
 
-    # [7. 트리맵 영역 및 호버 설정]
     dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
     dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
-    # [8. 파일 저장]
-    date_label = re.sub(r'[^0-9]', '', ref_time.split('~')[-1])[:4]
+    # [7. 파일 저장]
+    # ref_time에서 숫자만 추출하여 파일명 생성
+    date_label = "".join(re.findall(r'\d+', ref_time.split('~')[-1]))[:8]
+    if not date_label: date_label = "latest"
+    
     save_path = DOCS_WEEKLY_DIR / f"weekly_dashboard_{date_label}.html"
     
     dashboard.write_html(str(save_path), include_plotlyjs="cdn", config={"displaylogo": False})
 
-    # --- [이 부분을 추가하세요] ---
-    # 주간 최신 파일을 별도의 'weekly_latest.html'로 복사하여 관리합니다.
+    # 최신본 복사
     shutil.copy(save_path, DOCS_DIR / "weekly_latest.html")
-    # ----------------------------
     
     print(f"✅ 주간 대시보드 저장 완료: {save_path.name}")
     print(f"✅ 주간 최신본 업데이트 완료: weekly_latest.html")
