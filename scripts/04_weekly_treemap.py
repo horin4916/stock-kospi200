@@ -70,7 +70,7 @@ def make_weekly_dashboard():
     strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
     weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
     
-    # --- Daily 대시보드와 포맷 일치 (한 줄 통합 요약 텍스트) ---
+    # --- Daily 대시보드 구조에 맞춰 한 줄 통합 요약 텍스트로 가공 ---
     summary_ind = (f"🏢 <b>주간 강세 산업:</b> {strong_inds} | 📉 <b>주간 소외 산업:</b> {weak_inds} | "
                    f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}")
 
@@ -85,7 +85,7 @@ def make_weekly_dashboard():
         specs=[[{"type": "xy"}], [{"type": "treemap"}]]
     )
 
-    # [3. 트리맵 생성 - Daily와 완벽 스케일 매핑]
+    # [3. 트리맵 생성]
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", 
                        custom_data=["종목_hover"], color_continuous_scale="RdBu_r", color_continuous_midpoint=0)
     
@@ -119,7 +119,7 @@ def make_weekly_dashboard():
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 주간", method="update", 
-                     args=[{"visible": [True, False]}, 
+                     args=[{"visible": [True, False]}, # 트레이스 2개에 맞춘 정확한 맵핑
                            {"annotations[2].text": "<b>산업별 주간 트리맵 (Cap-Weighted)</b>",
                             "annotations[3].text": summary_ind}]),
                 dict(label="🤝 그룹사별 주간", method="update", 
@@ -138,4 +138,27 @@ def make_weekly_dashboard():
             y=0.96, 
             x=1.01,
             tickvals=[-10, -5, 0, 5, 10],
-            ticktext=
+            ticktext=["-10%", "-5%", "0%", "+5%", "+10%"]
+        )
+    )
+
+    # [6] 위치 강제 고정 및 호버 동기화
+    dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
+    dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
+
+    # [7. 파일 저장]
+    date_label = "".join(re.findall(r'\d+', ref_time.split('~')[-1]))[:8]
+    if not date_label: date_label = "latest"
+    
+    save_path = DOCS_WEEKLY_DIR / f"weekly_dashboard_{date_label}.html"
+    
+    dashboard.write_html(str(save_path), include_plotlyjs="cdn", config={"displaylogo": False})
+
+    # 최신본 복사
+    shutil.copy(save_path, DOCS_DIR / "weekly_latest.html")
+    
+    print(f"✅ 주간 대시보드 저장 완료: {save_path.name}")
+    print(f"✅ 주간 최신본 업데이트 완료: weekly_latest.html")
+
+if __name__ == "__main__":
+    make_weekly_dashboard()
