@@ -62,35 +62,35 @@ def make_weekly_dashboard():
     bottom5_str = " | ".join([f"{row['종목명']}({row['등락률']:+.2f}%)" for _, row in bottom5.iterrows()])
     
     ind_avg = df.groupby('1차 분류')['등락률'].mean().sort_values(ascending=False)
-    strong_inds = ind_avg.index[0]
-    weak_inds = ind_avg.index[-1]
+    strong_inds = ", ".join(ind_avg.index[:3])
+    weak_inds = ", ".join(ind_avg.index[-3:])
 
     df_g_only = df[df['그룹사'] != '미분류']
-    grp_stats = df_g_only.groupby('그룹사')['등락률'].mean() if not df_g_only.empty else None
-    strong_grp = grp_stats.idxmax() if grp_stats is not None else "N/A"
-    weak_grp = grp_stats.idxmin() if grp_stats is not None else "N/A"
+    grp_stats = df_g_only.groupby('그룹사')['등락률'].mean().sort_values(ascending=False) if not df_g_only.empty else None
+    strong_grp = ", ".join(grp_stats.index[:3]) if grp_stats is not None else "N/A"
+    weak_grp = ", ".join(grp_stats.index[-3:]) if grp_stats is not None else "N/A"
     
-    # --- Daily 대시보드 구조에 맞춰 한 줄 통합 요약 텍스트로 가공 ---
-    summary_ind = (f"🏢 <b>주간 강세 산업:</b> {strong_inds} | 📉 <b>주간 소외 산업:</b> {weak_inds} | "
-                   f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}")
+    # 🌟 [기존 방식 유지] 기존 이미지의 다채로운 개별 리포트 텍스트 복원
+    summary_ind_lead = f"🏢 <b>주간 주도 산업:</b> <span style='color:#d62728'>{strong_inds}</span>"
+    summary_ind_lag  = f"📉 <b>주간 소외 산업:</b> <span style='color:#1f77b4'>{weak_inds}</span>"
 
-    summary_grp = (f"🤝 <b>주간 강세 그룹:</b> {strong_grp} | 📉 <b>주간 약세 그룹:</b> {weak_grp} | "
-                   f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}")
+    summary_grp_lead = f"🤝 <b>주간 강세 그룹:</b> <span style='color:#d62728'>{strong_grp}</span>"
+    summary_grp_lag  = f"📉 <b>주간 약세 그룹:</b> <span style='color:#1f77b4'>{weak_grp}</span>"
 
     # [2. 대시보드 객체 생성]
     dashboard = make_subplots(
         rows=2, cols=1,
-        row_heights=[0.1, 0.9],
+        row_heights=[0.08, 0.92], # 상단 요약문 확보를 위해 본체 비율 소폭 조정
         vertical_spacing=0.03,
         specs=[[{"type": "xy"}], [{"type": "treemap"}]]
     )
 
     # [3. 트리맵 생성]
     fig_i = px.treemap(df, path=["1차 분류", "2차 분류", "종목명"], values="시가총액", color="등락률", 
-                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", color_continuous_midpoint=0)
+                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", range_color=[-10, 10], color_continuous_midpoint=0)
     
     fig_g = px.treemap(df, path=["그룹사", "종목명"], values="시가총액", color="등락률", 
-                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", color_continuous_midpoint=0)
+                       custom_data=["종목_hover"], color_continuous_scale="RdBu_r", range_color=[-10, 10], color_continuous_midpoint=0)
 
     # [4. 트레이스 추가]
     for trace in fig_i.data:
@@ -99,33 +99,43 @@ def make_weekly_dashboard():
         trace.visible = False
         dashboard.add_trace(trace, row=2, col=1) # Trace 1: 그룹사별
 
-    # [5. 레이아웃 설정 - Daily 디자인 규격 완전 이식]
+    # [5. 레이아웃 설정 - 상단은 신규(Daily) 형태, 하단 요약은 기존(Weekly) 4줄 분리 구조 융합]
     dashboard.update_layout(
         template="plotly_white",
-        height=1000, 
-        margin=dict(t=210, b=20, l=20, r=80),
+        height=1100, # 요약문 4줄 분리 처리를 위해 높이 증대
+        margin=dict(t=240, b=20, l=20, r=80), # 상단 여백 확대
         coloraxis_colorscale="RdBu_r",
         coloraxis_cmid=0,
         
         annotations=[
-            dict(text="<b>KOSPI 200 Weekly Market Map</b>", x=0, y=1.24, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
-            dict(text=f"분석 기간: {ref_time} | Visualization by HORIN", x=0, y=1.19, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
-            dict(text="<b>산업별 주간 트리맵 (Cap-Weighted)</b>", x=0, y=1.075, xref="paper", yref="paper", showarrow=False, font=dict(size=20), xanchor="left"),
-            dict(text=summary_ind, x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=13, color="#333"), xanchor="left", align="left")
+            # 인덱스 0: 신규 대형 타이틀 적용
+            dict(text="<b>KOSPI 200 Weekly Market Map</b>", x=0, y=1.26, xref="paper", yref="paper", showarrow=False, font=dict(size=32), xanchor="left"),
+            # 인덱스 1: 신규 서브 타이틀 정보
+            dict(text=f"분석 기간: {ref_time} | Visualization by HORIN", x=0, y=1.21, xref="paper", yref="paper", showarrow=False, font=dict(size=15, color="gray"), xanchor="left"),
+            
+            # 인덱스 2: 주도 산업 / 강세 그룹 (버튼 클릭 시 교체됨)
+            dict(text=summary_ind_lead, x=0, y=1.12, xref="paper", yref="paper", showarrow=False, font=dict(size=14), xanchor="left"),
+            # 인덱스 3: 소외 산업 / 약세 그룹 (버튼 클릭 시 교체됨)
+            dict(text=summary_ind_lag, x=0, y=1.07, xref="paper", yref="paper", showarrow=False, font=dict(size=14), xanchor="left"),
+            
+            # 인덱스 4: WEEKLY TOP 5 (고정)
+            dict(text=f"🚀 <b>WEEKLY TOP 5:</b> {top5_str}", x=0, y=1.02, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#d62728"), xanchor="left"),
+            # 인덱스 5: WEEKLY BOTTOM 5 (고정)
+            dict(text=f"🔻 <b>WEEKLY BOTTOM 5:</b> {bottom5_str}", x=0, y=0.98, xref="paper", yref="paper", showarrow=False, font=dict(size=12, color="#1f77b4"), xanchor="left")
         ],
 
         updatemenus=[dict(
-            type="buttons", direction="left", x=0, y=1.13, xanchor="left", yanchor="top",
+            type="buttons", direction="left", x=0, y=1.16, xanchor="left", yanchor="top",
             active=0, showactive=True,
             buttons=[
                 dict(label="🏢 산업별 주간", method="update", 
-                     args=[{"visible": [True, False]}, # 트레이스 2개에 맞춘 정확한 맵핑
-                           {"annotations[2].text": "<b>산업별 주간 트리맵 (Cap-Weighted)</b>",
-                            "annotations[3].text": summary_ind}]),
+                     args=[{"visible": [True, False]}, 
+                           {"annotations[2].text": summary_ind_lead,
+                            "annotations[3].text": summary_ind_lag}]),
                 dict(label="🤝 그룹사별 주간", method="update", 
                      args=[{"visible": [False, True]}, 
-                           {"annotations[2].text": "<b>그룹사별 주간 트리맵 (Cap-Weighted)</b>",
-                            "annotations[3].text": summary_grp}])
+                           {"annotations[2].text": summary_grp_lead,
+                            "annotations[3].text": summary_grp_lag}])
             ]
         )],
         
@@ -133,9 +143,9 @@ def make_weekly_dashboard():
             title="주간 등락률(%)",
             thickness=20,
             lenmode="fraction", 
-            len=0.90, 
+            len=0.86, # 본체 높이 조정에 맞춰 최적화
             yanchor="top",
-            y=0.96, 
+            y=0.94, 
             x=1.01,
             tickvals=[-10, -5, 0, 5, 10],
             ticktext=["-10%", "-5%", "0%", "+5%", "+10%"]
@@ -143,7 +153,7 @@ def make_weekly_dashboard():
     )
 
     # [6] 위치 강제 고정 및 호버 동기화
-    dashboard.update_traces(domain=dict(y=[0, 0.96]), row=2, col=1)
+    dashboard.update_traces(domain=dict(y=[0, 0.94]), row=2, col=1)
     dashboard.update_traces(hovertemplate="%{customdata[0]}<extra></extra>", row=2, col=1)
 
     # [7. 파일 저장]
