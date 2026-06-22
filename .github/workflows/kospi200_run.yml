@@ -3,21 +3,21 @@ name: KOSPI200 Daily & Weekly Dashboard
 on:
   workflow_dispatch: # 수동 실행 버튼
   schedule:
-    # 한국 시간 오후 4시 10분 (UTC 오전 7시 10분)
+    # 한국 시간 오후 4시 10분 (UTC 오전 7시 10분) - 월~금 자동 스케줄러
     - cron: '10 7 * * 1-5' 
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Seoul # 서버 시간을 한국 시간으로 고정
+      TZ: Asia/Seoul # 가상 서버 시간을 한국 시간(KST)으로 고정
     permissions:
-      contents: write # 파일 수정 및 푸시 권한 부여
+      contents: write # 파일 수정 후 저장소에 자동 푸시(Commit & Push)하기 위해 권한 허용
       
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 전체 히스토리를 가져와 Rebase 오류 방지
+          fetch-depth: 0 # 전체 히스토리를 가져와 Rebase 충돌 및 푸시 오류 방지
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,15 +34,15 @@ jobs:
           python scripts/01_collect_daily.py
           python scripts/02_daily_treemap.py
         
-      # [2] 금요일 전용 작업: 주간 요약 데이터 및 트리맵 생성
-      - name: Weekly Summary & Visualization (Friday Only)
+      # [2] 주간 작업: 금요일 자동 스케줄러 발동 시 혹은 사용자가 '수동 실행' 버튼을 눌렀을 때 무조건 실행
+      - name: Weekly Summary & Visualization
         run: |
-          # 파이썬으로 오늘이 금요일(4)인지 체크 후 실행
-          python -c "from datetime import datetime; import sys; sys.exit(0 if datetime.now().weekday() == 4 else 1)" && (
-            echo "Today is Friday. Running weekly tasks..."
+          # 🌟 [보완 포인트] 오늘이 금요일(4)이거나, 이벤트 이름이 'workflow_dispatch'(수동 실행)인 경우 0을 반환하여 실행을 허용
+          python -c "from datetime import datetime; import sys; import os; sys.exit(0 if (datetime.now().weekday() == 4 or '${{ github.event_name }}' == 'workflow_dispatch') else 1)" && (
+            echo "🎯 조건 충족 (금요일 자동 스케줄 또는 수동 실행). 주간 트리맵 작업을 시작합니다..."
             python scripts/03_process_weekly.py
             python scripts/04_weekly_treemap.py
-          ) || echo "Not Friday, skipping weekly tasks."
+          ) || echo "⏭️ 금요일이 아니며 수동 트리거가 아닙니다. 주간 트리맵 작업을 건너뜁니다."
 
       # [3] 인덱스 페이지 업데이트 (보관함 목록 갱신)
       - name: Update Index Page
@@ -55,9 +55,9 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .
           
-          # 변경사항이 있을 때만 커밋
+          # 변경사항이 있을 때만 커밋 수행
           git commit -m "Auto-update: Market Data & Index [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
           
-          # 원격 저장소의 최신 상태를 가져와 합친 후 푸시 (충돌 방지)
+          # 원격 저장소의 최신 상태를 가져와 안전하게 병합한 후 최종 푸시
           git pull --rebase origin main
           git push origin main
