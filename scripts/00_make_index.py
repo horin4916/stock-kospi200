@@ -23,9 +23,16 @@ def generate_index():
     weekly_files = sorted(list(WEEKLY_DIR.glob("*.html")), reverse=True)
     weekly_data = []
     for f in weekly_files:
-        display_name = f.name.replace(".html", "").replace("weekly_", "")
-        # 수정 포인트: 중괄호 하나만 사용
-        weekly_data.append({"name": f.name, "date": display_name, "path": "weekly/" + f.name})
+        # 파일명에서 8자리 숫자 날짜 패턴(YYYYMMDD) 추출
+        date_match = re.search(r'(\d{4})(\d{2})(\d{2})', f.name)
+        if date_match:
+            # 가독성이 좋게 YYYY-MM-DD 형태로 변환
+            date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
+        else:
+            # 만약 파일명에 날짜 숫자가 없다면 기존 텍스트 정제 방식 백업 사용
+            date_str = f.name.replace(".html", "").replace("weekly_", "")
+            
+        weekly_data.append({"name": f.name, "date": date_str, "path": "weekly/" + f.name})
 
     # 2. HTML 템플릿 (f-string 시작 - 여기서는 CSS/JS를 위해 {{ }} 사용)
     html_content = f"""
