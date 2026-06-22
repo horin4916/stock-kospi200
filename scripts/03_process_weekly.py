@@ -66,7 +66,21 @@ def make_weekly_csv():
     df_weekly['기준시각'] = weekly_label
 
     # 파일 저장
-    output_name = f"weekly_kpi200_{this_file_dt.strftime('%Y%m%d')}.csv"
+    # 🌟 [날짜 보정 추가] 최신 파일의 요일을 확인 (5=토요일, 6=일요일)
+    weekday_num = this_fri_dt.weekday()
+    label_dt = this_fri_dt
+
+    if weekday_num == 5:     # 만약 토요일이라면 하루를 빼서 금요일로 변경
+        label_dt = this_fri_dt - pd.Timedelta(days=1)
+    elif weekday_num == 6:   # 만약 일요일이라면 이틀을 빼서 금요일로 변경
+        label_dt = this_fri_dt - pd.Timedelta(days=2)
+
+    # 기준시각 라벨 업데이트 (트리맵 제목 연동 시 토요일 대신 금요일 날짜가 뜨도록 보정)
+    weekly_label = f"{last_fri_dt.strftime('%m.%d')}~{label_dt.strftime('%m.%d')} Weekly"
+    df_weekly['기준시각'] = weekly_label
+
+    # 파일 저장 (이름이 무조건 금요일 날짜 기준으로 생성됨)
+    output_name = f"weekly_kpi200_{label_dt.strftime('%Y%m%d')}.csv"
     output_path = DATA_WEEKLY_DIR / output_name
     df_weekly.to_csv(output_path, index=False, encoding="utf-8-sig")
     
